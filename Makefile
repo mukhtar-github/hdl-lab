@@ -11,6 +11,8 @@
 IVERILOG := iverilog
 VVP      := vvp
 GTKWAVE  := gtkwave
+RTL      := rtl
+TB       := tb
 BUILD    := build
 
 # -g2012 selects the SystemVerilog-2012 language level.
@@ -32,17 +34,17 @@ $(BUILD):
 
 mux: | $(BUILD)
 	@echo "--- mux2 ---"
-	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/mux2.vvp 01_mux2.sv 01_tb_mux2.sv
+	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/mux2.vvp $(RTL)/01_mux2.sv $(TB)/01_tb_mux2.sv
 	@$(VVP) $(BUILD)/mux2.vvp
 
 adder: | $(BUILD)
 	@echo "--- ripple_adder ---"
-	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/adder.vvp 02_adder.sv 02_tb_adder.sv
+	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/adder.vvp $(RTL)/02_adder.sv $(TB)/02_tb_adder.sv
 	@$(VVP) $(BUILD)/adder.vvp
 
 seq: | $(BUILD)
 	@echo "--- sequential ---"
-	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/seq.vvp 03_sequential.sv 03_tb_sequential.sv
+	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/seq.vvp $(RTL)/03_sequential.sv $(TB)/03_tb_sequential.sv
 	@$(VVP) $(BUILD)/seq.vvp
 
 wave-mux:
@@ -57,8 +59,8 @@ wave-seq:
 # Verilator's linter catches synthesis problems Icarus will happily ignore
 # (inferred latches, width mismatches, unclocked signals). Run it often.
 lint:
-	verilator --lint-only -Wall --top-module counter 03_sequential.sv || true
-	verilator --lint-only -Wall --top-module ripple_adder 02_adder.sv || true
+	verilator --lint-only -Wall --top-module counter $(RTL)/03_sequential.sv || true
+	verilator --lint-only -Wall --top-module ripple_adder $(RTL)/02_adder.sv || true
 
 clean:
 	rm -rf $(BUILD)

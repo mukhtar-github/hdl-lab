@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Capture a measurement with enough provenance to reproduce it.
 #
-#   ./results/capture.sh <label> <command...>
+#   scripts/capture.sh <label> <command...>
 #
 # Example:
-#   ./results/capture.sh adder-exhaustive make adder
+#   scripts/capture.sh adder-exhaustive make adder
 #
-# Writes results/<timestamp>-<label>/ containing manifest.md, stdout.txt,
-# stderr.txt and a diff of any uncommitted changes.
+# Writes docs/results/<timestamp>-<label>/ containing manifest.md,
+# stdout.txt, stderr.txt and a diff of any uncommitted changes.
+# Runnable from anywhere in the tree — the output path is resolved
+# from the repository root, not from your current directory.
 #
 # Never record a measurement by hand. You will omit the one field that
 # turns out to matter.
@@ -21,7 +23,10 @@ fi
 
 LABEL="$1"; shift
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
-DIR="$(dirname "$0")/${TS}-${LABEL}"
+
+# Resolve from the repo root so the script works from any directory.
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$0")")"
+DIR="${ROOT}/docs/results/${TS}-${LABEL}"
 mkdir -p "$DIR"
 
 # --- provenance ---------------------------------------------------------
@@ -90,6 +95,6 @@ cat > "$DIR/manifest.md" << EOF
      a flaky test you re-ran. Especially: reasons to distrust it. -->
 EOF
 
-echo "captured → $DIR   (exit ${STATUS})"
+echo "captured → ${DIR#"$ROOT"/}   (exit ${STATUS})"
 echo "fill in Configuration and Result in manifest.md while it is fresh"
 exit $STATUS

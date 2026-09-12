@@ -33,16 +33,26 @@ make wave-seq # open the sequential waveform in GTKWave
 
 Expected output ends with three `PASS` lines.
 
+## Where things are
+
+| | |
+|---|---|
+| `rtl/` | Synthesisable hardware |
+| `tb/` | Testbenches |
+| `scripts/` | `capture.sh` — never record a measurement by hand |
+| `docs/` | `journal/` (what happened) · `decisions/` (why) · `results/` (numbers) |
+| `build/` | Generated. Git-ignored |
+
 ## What is actually in here
 
 | File | Concept |
 |---|---|
-| `01_mux2.sv` | Structural vs behavioral description; the mux |
-| `01_tb_mux2.sv` | Self-checking testbench, exhaustive over 8 cases |
-| `02_adder.sv` | Full adder; `generate`; parameterised modules |
-| `02_tb_adder.sv` | Golden-model checking, exhaustive over 512 cases |
-| `03_sequential.sv` | Flip-flop, register with enable, counter; blocking vs non-blocking |
-| `03_tb_sequential.sv` | Clock generation, reset sequencing, time-based checks |
+| `rtl/01_mux2.sv` | Structural vs behavioral description; the mux |
+| `tb/01_tb_mux2.sv` | Self-checking testbench, exhaustive over 8 cases |
+| `rtl/02_adder.sv` | Full adder; `generate`; parameterised modules |
+| `tb/02_tb_adder.sv` | Golden-model checking, exhaustive over 512 cases |
+| `rtl/03_sequential.sv` | Flip-flop, register with enable, counter; blocking vs non-blocking |
+| `tb/03_tb_sequential.sv` | Clock generation, reset sequencing, time-based checks |
 
 ## Do this before writing any new code
 
