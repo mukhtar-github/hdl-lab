@@ -16,7 +16,7 @@ brew install icarus-verilog gtkwave verilator
 
 **Windows** — use WSL2. Native Windows HDL tooling is not worth the pain.
 
-Verified against **Icarus Verilog 13.0** and **Verilator 5.050**. Icarus 12 also works, with one
+Verified against **Icarus Verilog 13.0**, **Verilator 5.050** and **Surfer 0.7.0**. Icarus 12 also works, with one
 caveat: Icarus 13 rejects `logic` on a gate-primitive output, which is why `mux2_structural`
 declares `output wire y` and its behavioral twin declares `output logic y`. They are not
 interchangeable to the tool even though they read as though they are.
@@ -34,7 +34,13 @@ Two simulators on purpose:
 make            # all three testbenches — ends in three PASS lines
 make lint       # 8 modules, must stay green
 make lint-trap  # watch the linter catch the deliberate bug
-make wave-seq   # open the sequential waveform in GTKWave
+make wave-seq   # open the sequential waveform in Surfer
+```
+
+To check a viewer actually parses a waveform without opening a window:
+
+```bash
+surfer server --file build/sequential.vcd
 ```
 
 `make lint` **fails on any warning**. A lint target that cannot go red tells you nothing — this

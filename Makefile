@@ -3,7 +3,7 @@
 #
 #   make              run every testbench
 #   make mux          run one testbench (mux | adder | seq)
-#   make wave-mux     open its waveform  (wave-mux | wave-adder | wave-seq)
+#   make wave-mux     open its waveform in Surfer (wave-mux|wave-adder|wave-seq)
 #   make lint         static-check the RTL with Verilator — must stay green
 #   make lint-trap    demonstrate the linter catching the deliberate bug
 #   make lint-file FILE=x.sv TOP=x    lint anything (Exercise 3 uses this)
@@ -12,7 +12,9 @@
 
 IVERILOG := iverilog
 VVP      := vvp
-GTKWAVE  := gtkwave
+# Surfer, not GTKWave: the GTKWave cask ships a 2020 x86_64-only binary
+# that is SIGKILLed on this arm64 Mac. See docs/decisions/0005.
+WAVE     := surfer
 VERILATOR:= verilator
 RTL      := rtl
 TB       := tb
@@ -68,13 +70,13 @@ seq: | $(BUILD)
 	@$(VVP) $(BUILD)/seq.vvp
 
 wave-mux:
-	$(GTKWAVE) $(BUILD)/mux2.vcd &
+	$(WAVE) $(BUILD)/mux2.vcd &
 
 wave-adder:
-	$(GTKWAVE) $(BUILD)/adder.vcd &
+	$(WAVE) $(BUILD)/adder.vcd &
 
 wave-seq:
-	$(GTKWAVE) $(BUILD)/sequential.vcd &
+	$(WAVE) $(BUILD)/sequential.vcd &
 
 # ------------------------------------------------------------
 # Lint. Verilator catches what Icarus accepts happily but synthesis
