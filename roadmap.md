@@ -2,6 +2,23 @@
 
 *Revised endpoint: a general-purpose core with a domain-specific extension, quantified.*
 
+> **Status: canonical.** Adopted 2026-09-12. This is the version the project is built against.
+> Supersedes all earlier drafts. Changes to it are decision records in `docs/decisions/`, not
+> silent edits.
+
+**The project in one line:**
+
+> A pipelined RV32IM processor optimised through evidence-driven hardware specialisation for
+> telematics frame decoding.
+
+**The question it exists to answer:**
+
+> Are the already-ratified RISC-V extensions sufficient for telematics frame decoding, or does
+> measured workload behaviour justify a genuinely custom extension?
+
+That question is open, and a finding of *"the standard already covers it"* is a real result —
+see rule 3 of the standard/custom boundary. It is not a fallback.
+
 ---
 
 ## What changed and why
@@ -118,8 +135,13 @@ the **sequence** matters far more than the calendar, and the gates matter more t
 Simulator, waveform viewer, linter. Gates, mux, adder, flip-flop, register, counter. Every
 module exhaustively self-checked from the first one.
 
+**And, in parallel — the benchmark.** Decision `0004` makes this binding: the stimulus
+generator, reference decoder and Spike reference result are built *here*, before the core
+exists, not in Phase 4 when they would be shaped by what the core turned out to do well.
+
 **Gate:** you can find a bug you deliberately introduced by reading a waveform, without
-adding print statements.
+adding print statements. *This gate requires a working waveform viewer — see the open
+questions in `docs/README.md`.*
 
 ---
 
@@ -169,7 +191,7 @@ hand-written test and destroy you later.
 
 ---
 
-### Phase 4 — Profile and choose the domain *(weeks 24–30)* ← **the new phase**
+### Phase 4 — Profile and choose the mechanism *(weeks 24–30)* ← **the new phase**
 
 This is the phase the original plan lacked entirely, and it is what makes everything after it
 mean something.
@@ -336,6 +358,26 @@ Any architect reviewing your work will ask for all three. Reporting one is a red
 The third one catches more people than the first two combined. It is also the number that
 proves you understand what you built.
 
+### The table this all gets reported in
+
+Every cell filled, or the empty ones explained. Three rows, because two rows cannot answer the
+build-versus-buy question and one row cannot answer anything.
+
+| | Cycles (hot loop) | Fmax | Energy / packet | Area (LUT + FF) |
+|---|---|---|---|---|
+| Commodity MCU | | | | — (not obtainable) |
+| Our RV32IM (baseline) | | | | |
+| Our RV32IM + extension | | | | |
+
+Read down the columns and the project answers three separate questions:
+
+1. **Did specialisation accelerate the workload?** — baseline row vs extension row, cycles.
+2. **What did specialisation cost?** — the same two rows, area and Fmax.
+3. **Was specialisation worth doing at all, rather than buying a part?** — commodity row vs
+   either of ours, on energy per packet.
+
+Question 3 is the one that cannot be answered retroactively, and the one most projects skip.
+
 **A fourth, if your deployment is power-constrained:** energy per operation. For a
 battery or solar-powered device, joules matter more than cycles, and a mechanism that is
 slower but wakes the core less often can win outright. Speed is a proxy for energy at best,
@@ -361,8 +403,8 @@ write up the results.
 
 ## Candidate domains
 
-**Choose one now**, in Phase 0. What hardware to build for it is decided in Phase 4, after
-measurement. Listed with honest trade-offs.
+**Choose one now**, in Phase 0 — this is the *domain*. What hardware to build for it is the
+*mechanism*, decided in Phase 4, after measurement. Listed with honest trade-offs.
 
 **Telematics frame decoding at line rate — the commitment this revision was written around.**
 Note how it is stated: *a protocol family and a rate*, never a deployment. Frame sync over a

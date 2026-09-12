@@ -1,17 +1,79 @@
-# hdl-lab — Project 1
+# hdl-lab
 
-Everything here compiles and passes. Verified, not sketched.
+> A pipelined RV32IM processor optimised through evidence-driven hardware specialisation for
+> telematics frame decoding.
 
-## Setup (30 minutes, once)
+The question this project exists to answer:
 
-**Linux / WSL**
-```bash
-sudo apt install iverilog gtkwave verilator
+> **Are the already-ratified RISC-V extensions sufficient for telematics frame decoding, or does
+> measured workload behaviour justify a genuinely custom extension?**
+
+That question is open. *"The standard already covers it"* is a real result, not a fallback.
+
+**The plan is `roadmap.md`** (canonical, adopted 2026-09-12). **The record is `docs/`** — read
+`docs/README.md` before writing anything down.
+
+The order everything follows:
+
 ```
+workload → benchmark → reference result → CPU → profile → bottleneck
+        → mechanism → implement → measure
+```
+
+The mechanism is chosen at the end, from evidence. Choosing it first turns profiling into
+theatre.
+
+---
+
+## Where things are
+
+| | |
+|---|---|
+| `rtl/` | Synthesisable hardware |
+| `tb/` | Testbenches |
+| `bench/` | The benchmark — built *before* the core. Read `bench/README.md` first |
+| `scripts/` | `capture.sh` — never record a measurement by hand |
+| `docs/` | `journal/` what happened · `decisions/` why · `results/` numbers · `experiments/` questions · `bugs/` evidence |
+| `build/` | Generated. Git-ignored |
+
+---
+
+## Current status — Phase 0
+
+```
+✅ Icarus Verilog 13.0     ✅ mux2: structural + behavioral, 8/8 exhaustive
+✅ Verilator 5.050         ✅ ripple_adder: 512/512 exhaustive
+✅ Surfer 0.7.0            ✅ sequential: counter + shift-register pair
+                           ✅ make lint — 8 modules, green and meaningful
+```
+
+**The Phase 0 gate is not "everything compiles."** It is:
+
+> Introduce a bug deliberately and locate it by reading a waveform, without adding print
+> statements.
+
+That gate is now reachable — it was blocked until 2026-09-12 by a waveform viewer that had
+never once run (`docs/decisions/0005`). Exercise 2 below *is* the gate.
+
+Next hardware step: `rtl/02_adder.sv`, then Exercise 2.
+
+---
+
+## Setup
 
 **macOS**
 ```bash
-brew install icarus-verilog gtkwave verilator
+brew install icarus-verilog verilator surfer
+```
+
+Not `gtkwave`. The Homebrew cask ships a 2020 **x86_64-only** binary; on an arm64 Mac without
+Rosetta it is SIGKILLed on launch and prints nothing at all — it exits 137 and looks like it
+merely produced no output. Surfer is native, current, and reads the same VCD files.
+See `docs/decisions/0005-waveform-viewer.md`.
+
+**Linux / WSL**
+```bash
+sudo apt install iverilog verilator    # then: gtkwave, or surfer if packaged
 ```
 
 **Windows** — use WSL2. Native Windows HDL tooling is not worth the pain.
@@ -47,17 +109,7 @@ surfer server --file build/sequential.vcd
 one silently checked nothing at all until 2026-09-12, including never once looking at the
 module that is wrong on purpose.
 
-## Where things are
-
-| | |
-|---|---|
-| `rtl/` | Synthesisable hardware |
-| `tb/` | Testbenches |
-| `scripts/` | `capture.sh` — never record a measurement by hand |
-| `docs/` | `journal/` (what happened) · `decisions/` (why) · `results/` (numbers) |
-| `build/` | Generated. Git-ignored |
-
-## What is actually in here
+## What is in here
 
 | File | Concept |
 |---|---|
@@ -71,21 +123,24 @@ module that is wrong on purpose.
 ## Do this before writing any new code
 
 Run `make wave-seq` and open `build/sequential.vcd`. Find `dout_nb` and `dout_b`.
-Watch the same input pulse come out of one three cycles later than the other.
 
-Those two modules differ only in `<=` versus `=`. That difference is the single
-most common bug in beginner RTL, and it will not show up as a compile error —
-only as wrong behaviour in a waveform. Learning to read waveforms *is* the skill.
+Send one pulse in. It leaves `shift_blocking` after a single clock edge and `shift_nonblocking`
+after three — so you will see the same pulse emerge **two cycles apart**. The testbench prints
+this too: blocking asserts at cycle +0, non-blocking at cycle +2.
+
+Those two modules differ only in `<=` versus `=`. That difference is the single most common bug
+in beginner RTL, it will not show up as a compile error, and Icarus runs both without a murmur.
+`make lint-trap` shows Verilator finding it. Learning to read waveforms *is* the skill.
 
 ## Exercises (do these before Project 2)
 
-1. **mux4** — a 4-to-1 mux with a 2-bit select. Build it two ways: from three
-   `mux2` instances, and directly with a `case` statement. Write an exhaustive
-   testbench. Confirm both match.
+1. **mux4** — a 4-to-1 mux with a 2-bit select. Build it two ways: from three `mux2` instances,
+   and directly with a `case` statement. Write an exhaustive testbench. Confirm both match.
 
-2. **Break the adder deliberately.** Change `assign cout = (a & b) | (cin & (a ^ b));`
-   to `assign cout = a & b;`. Run `make adder`. Find the first failing case in the
-   waveform and explain *why* it fails before you fix it. Debugging your own
+2. **Break the adder deliberately.** Change `assign cout = (a & b) | (cin & (a ^ b));` to
+   `assign cout = a & b;`. Run `make adder`. **Capture the failing waveform into
+   `docs/journal/img/` before you fix it** — see the bug-evidence rule in `docs/README.md`.
+   Then find the first failing case and explain *why* it fails before fixing. Debugging your own
    working design is the cheapest debugging practice you will ever get.
 
 3. **Latch trap.** Write this to `scratch/latch.sv` and lint it:
@@ -102,21 +157,23 @@ only as wrong behaviour in a waveform. Learning to read waveforms *is* the skill
    Expect `%Warning-LATCH: Latch inferred for signal 'y'`. Understand exactly what hardware the
    tool thinks you asked for, and why that is almost never what you want.
 
-4. **Shift register with parallel load** — combine `reg_en` and the shift idea:
-   a module that either shifts by one or loads a whole new value, controlled by
-   a `load` input. This is a real component; you will use it again.
+4. **Shift register with parallel load** — combine `reg_en` and the shift idea: a module that
+   either shifts by one or loads a whole new value, controlled by a `load` input. This is a real
+   component; you will use it again.
 
-5. **Widen the adder to 32 bits.** 2^65 cases — exhaustive testing is now
-   impossible. Write a testbench that instead tries: all zeros, all ones, the
-   maximum value plus one, a few hundred random pairs, and every single-bit
-   value. Notice that you just invented *directed plus random* testing, which is
-   what real verification teams do.
+5. **Widen the adder to 32 bits.** 2^65 cases — exhaustive testing is now impossible. Write a
+   testbench that instead tries: all zeros, all ones, the maximum value plus one, a few hundred
+   random pairs, and every single-bit value. Notice that you just invented *directed plus random*
+   testing, which is what real verification teams do.
 
-Exercise 5 is the important one. It is the moment you learn that verification is
-a design problem, not a chore.
+Exercise 5 is the important one. It is the moment you learn that verification is a design
+problem, not a chore.
 
 ## Next
 
-Project 2 is the ALU: your adder plus SUB, AND, OR, XOR, SLT, and the shifts,
-behind a single opcode input. Straight after that, the register file. Then you
-have two of the three pieces a CPU needs.
+Project 2 is the ALU: the adder plus SUB, AND, OR, XOR, SLT and the shifts, behind a single
+opcode input. Then the register file. That is two of the three pieces a CPU needs.
+
+In parallel — and this is binding, see `docs/decisions/0004-benchmark-first.md` — the benchmark
+gets built now, not in Phase 4. A benchmark written after the core exists is shaped by what the
+core turned out to do well.
