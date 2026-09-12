@@ -1,6 +1,6 @@
 # hdl-lab — Project 1
 
-Everything here compiles and passes with Icarus Verilog 12. Verified, not sketched.
+Everything here compiles and passes. Verified, not sketched.
 
 ## Setup (30 minutes, once)
 
@@ -16,22 +16,30 @@ brew install icarus-verilog gtkwave verilator
 
 **Windows** — use WSL2. Native Windows HDL tooling is not worth the pain.
 
+Verified against **Icarus Verilog 13.0** and **Verilator 5.050**. Icarus 12 also works, with one
+caveat: Icarus 13 rejects `logic` on a gate-primitive output, which is why `mux2_structural`
+declares `output wire y` and its behavioral twin declares `output logic y`. They are not
+interchangeable to the tool even though they read as though they are.
+
 Two simulators on purpose:
-- **Icarus** runs your testbenches. Forgiving, fast to start, good error messages.
-- **Verilator** is used here only as a *linter* (`make lint`). It catches things
-  Icarus accepts happily but real synthesis will not — inferred latches, width
-  mismatches, signals assigned from two blocks. Run it often. Later, when your
-  CPU testbenches get slow, Verilator becomes your main simulator.
+- **Icarus** runs the testbenches. Forgiving, fast to start, good error messages.
+- **Verilator** is a *linter* here (`make lint`). It catches what Icarus accepts happily but
+  synthesis will not — inferred latches, width mismatches, signals assigned from two blocks,
+  blocking assignment inside a clocked block. Later, when CPU testbenches get slow, Verilator
+  becomes the main simulator. See `docs/decisions/0002-toolchain.md`.
 
 ## Run it
 
 ```bash
-make          # all three testbenches
-make lint     # static checks
-make wave-seq # open the sequential waveform in GTKWave
+make            # all three testbenches — ends in three PASS lines
+make lint       # 8 modules, must stay green
+make lint-trap  # watch the linter catch the deliberate bug
+make wave-seq   # open the sequential waveform in GTKWave
 ```
 
-Expected output ends with three `PASS` lines.
+`make lint` **fails on any warning**. A lint target that cannot go red tells you nothing — this
+one silently checked nothing at all until 2026-09-12, including never once looking at the
+module that is wrong on purpose.
 
 ## Where things are
 
@@ -74,14 +82,19 @@ only as wrong behaviour in a waveform. Learning to read waveforms *is* the skill
    waveform and explain *why* it fails before you fix it. Debugging your own
    working design is the cheapest debugging practice you will ever get.
 
-3. **Latch trap.** Write this and lint it:
+3. **Latch trap.** Write this to `scratch/latch.sv` and lint it:
    ```systemverilog
-   always_comb begin
-       if (sel) y = a;   // note: no else
-   end
+   module latch_trap (input logic sel, input logic a, output logic y);
+       always_comb begin
+           if (sel) y = a;   // note: no else
+       end
+   endmodule
    ```
-   `make lint` will complain. Understand exactly what hardware the tool thinks
-   you asked for, and why that is almost never what you want.
+   ```bash
+   make lint-file FILE=scratch/latch.sv TOP=latch_trap
+   ```
+   Expect `%Warning-LATCH: Latch inferred for signal 'y'`. Understand exactly what hardware the
+   tool thinks you asked for, and why that is almost never what you want.
 
 4. **Shift register with parallel load** — combine `reg_en` and the shift idea:
    a module that either shifts by one or loads a whole new value, controlled by

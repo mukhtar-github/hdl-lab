@@ -1,16 +1,19 @@
 # ============================================================
-# hdl-lab — Project 1
+# hdl-lab — RV32IM + telematics decode specialisation
 #
-#   make            run every testbench
-#   make mux        run one testbench
-#   make wave-mux   open its waveform in GTKWave
-#   make clean      remove build artefacts
-#   make lint       static-check the RTL with Verilator (optional)
+#   make              run every testbench
+#   make mux          run one testbench (mux | adder | seq)
+#   make wave-mux     open its waveform  (wave-mux | wave-adder | wave-seq)
+#   make lint         static-check the RTL with Verilator — must stay green
+#   make lint-trap    demonstrate the linter catching the deliberate bug
+#   make lint-file FILE=x.sv TOP=x    lint anything (Exercise 3 uses this)
+#   make clean        remove build artefacts
 # ============================================================
 
 IVERILOG := iverilog
 VVP      := vvp
 GTKWAVE  := gtkwave
+VERILATOR:= verilator
 RTL      := rtl
 TB       := tb
 BUILD    := build
@@ -19,7 +22,24 @@ BUILD    := build
 # Without it, always_ff / always_comb / logic will not compile.
 IVFLAGS  := -g2012 -Wall
 
-.PHONY: all mux adder seq clean lint
+# DECLFILENAME is waived deliberately: this kit groups related modules
+# per file (dff + reg_en + counter live together on purpose). It is a
+# naming-convention warning, not a synthesis problem — and left enabled
+# it is FATAL, which silently aborts the lint before any real check runs.
+VLFLAGS  := --lint-only -Wall -Wno-DECLFILENAME
+
+# Every module that must lint clean. Adding RTL? Add its top here.
+LINT_CLEAN := \
+	$(RTL)/01_mux2.sv:mux2_structural \
+	$(RTL)/01_mux2.sv:mux2_behavioral \
+	$(RTL)/02_adder.sv:full_adder \
+	$(RTL)/02_adder.sv:ripple_adder \
+	$(RTL)/03_sequential.sv:dff \
+	$(RTL)/03_sequential.sv:reg_en \
+	$(RTL)/03_sequential.sv:counter \
+	$(RTL)/03_sequential.sv:shift_nonblocking
+
+.PHONY: all mux adder seq clean lint lint-trap lint-file
 
 all: mux adder seq
 	@echo ""
@@ -56,11 +76,43 @@ wave-adder:
 wave-seq:
 	$(GTKWAVE) $(BUILD)/sequential.vcd &
 
-# Verilator's linter catches synthesis problems Icarus will happily ignore
-# (inferred latches, width mismatches, unclocked signals). Run it often.
+# ------------------------------------------------------------
+# Lint. Verilator catches what Icarus accepts happily but synthesis
+# will not — inferred latches, width mismatches, multiply-driven
+# signals, blocking assignment in a clocked block.
+#
+# This target FAILS on any warning. That is the point: a lint target
+# that cannot go red tells you nothing. Keep it green.
+# ------------------------------------------------------------
 lint:
-	verilator --lint-only -Wall --top-module counter $(RTL)/03_sequential.sv || true
-	verilator --lint-only -Wall --top-module ripple_adder $(RTL)/02_adder.sv || true
+	@fail=0; \
+	for spec in $(LINT_CLEAN); do \
+		f=$${spec%%:*}; m=$${spec##*:}; \
+		printf '  %-20s ' "$$m"; \
+		if $(VERILATOR) $(VLFLAGS) --top-module $$m $$f 2>&1 | grep -qE '%(Warning|Error)'; then \
+			echo "FAIL"; \
+			$(VERILATOR) $(VLFLAGS) --top-module $$m $$f 2>&1 | sed 's/^/      /'; \
+			fail=1; \
+		else echo "clean"; fi; \
+	done; \
+	if [ $$fail -ne 0 ]; then echo ""; echo "  lint FAILED"; exit 1; \
+	else echo ""; echo "  lint clean — $(words $(LINT_CLEAN)) modules"; fi
+
+# shift_blocking is WRONG ON PURPOSE (03_sequential.sv). This target
+# shows the linter finding it. Expect BLKSEQ warnings; that is success.
+lint-trap:
+	@echo "--- deliberate trap: shift_blocking (expect BLKSEQ warnings) ---"
+	@$(VERILATOR) $(VLFLAGS) --top-module shift_blocking $(RTL)/03_sequential.sv 2>&1 \
+		| grep -E 'BLKSEQ|Blocking assignment' | sed 's/^/  /' || true
+	@echo ""
+	@echo "  Verilator found the blocking-assignment-in-always_ff bug that"
+	@echo "  Icarus compiled and ran without a murmur. That is why lint exists."
+
+# Lint an arbitrary file — used by README Exercise 3 (the latch trap).
+#   make lint-file FILE=scratch/latch.sv TOP=latch_test
+lint-file:
+	@test -n "$(FILE)" || { echo "usage: make lint-file FILE=x.sv TOP=modname"; exit 1; }
+	@$(VERILATOR) $(VLFLAGS) --top-module $(TOP) $(FILE) || true
 
 clean:
 	rm -rf $(BUILD)
