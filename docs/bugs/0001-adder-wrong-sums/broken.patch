@@ -1,0 +1,11 @@
+--- a/rtl/02_adder.sv
++++ b/rtl/02_adder.sv
+@@ -16,7 +16,7 @@
+     output logic cout
+ );
+     assign sum  = a ^ b ^ cin;
+-    assign cout = (a & b) | (cin & (a ^ b));
++    assign cout = a & b;   // BUG (deliberate, exercise 2)
+ endmodule
+ 
+ 
