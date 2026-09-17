@@ -22,3 +22,7 @@ build/
 traces/
 bench/traces/
 *.trace
+
+# Third-party reference source — see reference/README.md to refetch.
+# Apache-2.0, pinned by commit. Read-only, not part of the build.
+reference/*.java
