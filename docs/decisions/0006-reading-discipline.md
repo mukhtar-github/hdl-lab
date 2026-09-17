@@ -63,9 +63,20 @@ Reading order, by value:
 
 1. **Traccar's source, first.** An open-source GPS platform implementing 200+ device protocols;
    its decoders are the de facto documentation for this family, because vendor specs are
-   inconsistent, incomplete and frequently only in Chinese. `Gt06ProtocolDecoder.java`; JT808
-   lives under the Huabao decoder. A working implementation of the thing you are about to write
-   beats any spec summary.
+   inconsistent, incomplete and frequently only in Chinese. A working implementation of the thing
+   you are about to write beats any spec summary. Four files, in
+   `src/main/java/org/traccar/protocol/`:
+
+   | | GT06 | JT/T 808 |
+   |---|---|---|
+   | Framing — find frame boundaries in the stream | `Gt06FrameDecoder.java` | `Jt808FrameDecoder.java` |
+   | Fields — dispatch, unpack, checksum | `Gt06ProtocolDecoder.java` | `Jt808ProtocolDecoder.java` |
+
+   <!-- Corrected 2026-09-17, same day as written. This record originally said "JT808 lives
+        under the Huabao decoder", which was true historically and is not true now — the file
+        was renamed to Jt808ProtocolDecoder.java. Verified against the repository rather than
+        carried forward. Path corrected in place because a broken pointer is a defect, not a
+        change of reasoning; nothing about the decision moved. -->
 2. **Real captured hex, second.** Traccar's forums carry raw packet logs posted by people
    debugging their own devices, plus a hex decoder tool. Useful for sanity-checking a parser
    before building a generator. See the provenance caveat in `bench/README.md` before any of it
