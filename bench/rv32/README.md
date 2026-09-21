@@ -1,0 +1,82 @@
+# bench/rv32 — bare-metal RV32 targets and the Spike reference
+
+**Benchmark type: specification-derived reconstruction.** Recorded here on the day it was
+written, per `bench/README.md` rule 3 and `docs/decisions/0004`.
+
+Stimulus is synthesised from the published GT06 layout. The terminal ID in `crc_itu_ref.c` is
+the obviously-fake sequence `01 23 45 67 89 AB CD EF`. **No captured operational data, no real
+IMEI, no forum hex.** Nothing here came from the FleetPoynt trace, and nothing here is
+instrumented production software.
+
+## Why bare metal, with no libc
+
+Homebrew's `riscv64-elf-gcc` is a *freestanding* compiler — no newlib, no `crt0.o`, no `libc`.
+Compiling works; linking against a C library does not, because there is no C library.
+
+That constraint turned out to be the right target anyway:
+
+```
+the core we are building will have no OS and no libc
+        ↓
+a reference measured through newlib's printf
+        ↓
+would partly be measuring newlib
+```
+
+So output goes through Spike's HTIF directly (`htif.c`), and `crt0.S` is 12 instructions. The
+reference program's instruction count is the decode work and nothing else.
+
+## Layout
+
+| File | What it is |
+|---|---|
+| `crt0.S` | Startup: set `sp`, zero `.bss`, call `main`, exit through HTIF |
+| `htif.h` / `htif.c` | `putchar` / `puts` / hex / `exit` over Spike's host-target interface |
+| `link.ld` | Loads at `0x80000000` (Spike's DRAM base); gives `tohost`/`fromhost` their own page |
+| `crc_itu_ref.c` | CRC-ITU over a GT06-shaped frame — the smallest real piece of the decoder |
+| `Makefile` | `make`, `make run`, `make dump`, `make clean` |
+
+## Toolchain, pinned
+
+| Component | Version | How it was installed |
+|---|---|---|
+| Compiler | `riscv64-elf-gcc` 16.2.0 | `brew install riscv64-elf-gcc` (bottled) |
+| Binutils | `riscv64-elf-ld` 2.47 | dependency of the above |
+| Simulator | Spike **1.1.0**, tag `v1.1.0`, commit `530af85d83781a3dae31a4ace84a573ec255fefa` | built from source, see below |
+
+**Spike was not installed from the Homebrew tap, deliberately.** The tap's formula is
+`url "https://github.com/riscv/riscv-isa-sim.git"` with `version "main"` — an *unpinned* git
+branch with no source checksum, and its bottles are built for `sequoia` while this host is
+`tahoe`, so it would have compiled whatever happened to be on `main` that day. Installing the
+component that *defines the golden result* from a moving target defeats the purpose of having a
+golden result. Installing it also requires `brew trust` on a third-party tap.
+
+Built instead from the tagged release, with the commit verified against the tag listing:
+
+```bash
+git clone --depth 1 --branch v1.1.0 \
+    https://github.com/riscv-software-src/riscv-isa-sim.git
+cd riscv-isa-sim && git rev-parse HEAD   # must be 530af85d83781a3dae31a4ace84a573ec255fefa
+mkdir build && cd build
+../configure --prefix="$HOME/.local" --without-boost --without-boost-asio --without-boost-regex
+make -j"$(sysctl -n hw.ncpu)" && make install
+```
+
+## Run it
+
+```bash
+make -C bench/rv32 run
+```
+
+Do not record a number from that by hand. Use `scripts/capture.sh`, which writes the commit,
+the working-tree cleanliness and every tool version alongside the output.
+
+## One harness bug already found here, worth knowing about
+
+`htif_exit` originally did not wait for Spike to consume the previous HTIF command before
+writing the exit command. The result: **the last character of output was silently dropped** —
+the trailing newline vanished, and nothing reported an error. A result whose final byte depends
+on a race is not a result. `htif_exit` now drains `tohost` first.
+
+The general shape of that is worth carrying: the harness is as capable of lying as the design
+is, and it lies more quietly.
