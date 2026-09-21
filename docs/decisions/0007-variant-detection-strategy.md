@@ -1,7 +1,8 @@
 # 0007 — How does the reference decoder carry variant and version state?
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-09-21** — see *Amendment* at the end. The decision to
+  build both modes stands; three claims used to justify it did not survive review.
 - **Phase:** 0
 
 ## Context
@@ -52,11 +53,14 @@ options below being a minor and a major decision.
    *For:* the difference between them *is* the measurement of dispatch cost, which is the
    quantity Prediction A actually disputes. Refuses to guess. *Against:* every result manifest
    carries a mode field.
-   <!-- This option originally read "roughly doubles reference-decoder work". That estimate was
-        wrong and is corrected here rather than quietly dropped: detection sits behind one
-        interface and the decoder body is shared, so the second mode is a session map plus a
-        revalidate-on-failure path — call it 15%, not 100%. The bad estimate would have argued
-        against the option that was chosen. -->
+   <!-- This option originally read "roughly doubles reference-decoder work", which was invented
+        while writing and never checked. It was replaced with "call it 15%" — which has EXACTLY
+        THE SAME PROVENANCE: also invented while writing, also against code that does not exist,
+        and carrying the per-connection-locality assumption the Amendment below demolishes. A
+        bounded state table with an eviction policy, at line rate, is not 15% of a stateless
+        decoder. Treat 15% as an unchecked estimate to be measured against the implementation,
+        not as the correction of an unchecked number. Replacing a bad estimate with a
+        better-reasoned one is not the same as checking it. -->
 
 ## Decision
 
@@ -142,3 +146,69 @@ would be convenient, and it is the honest one.
 path needs no revalidation and the two modes differ only in a cache lookup — much less
 interesting, and the second mode may not earn its keep. Or if measurement shows the delta is
 within run-to-run noise, which would settle Prediction A's dispatch half on its own.
+
+
+---
+
+# Amendment — 2026-09-21
+
+The decision stands: stateless and cached are both built, and the delta between them is the
+instrument. Three of the claims used to justify it did not survive review.
+
+## 1. "Stateless declines to optimise" was the wrong frame
+
+Stateless is not the absence of a choice. It **sets the per-frame dispatch term to its maximum**,
+exactly as cached sets it near its minimum. The two *bracket* dispatch cost from opposite ends;
+neither is neutral.
+
+That does not change which one is built or why, but it changes what may be said about the result.
+Calling the stateless figure "the reference result" without qualification invites Phase 4 to read
+*"the reference shows dispatch dominating"* as **the** finding rather than as **one bound** — and
+that reading would be wrong in the direction most favourable to Prediction A.
+
+**The resolution is that the benchmark has two distinct uses, and they want different numbers:**
+
+| Use | Number | Why |
+|---|---|---|
+| Denominator for speedup claims (`0004`) | the **stateless** figure | A platform comparison. Same program, same mode, both sides. One denominator, as promised. |
+| Characterising where decode time goes | the **stateless–cached range** | A workload question. Quoting either endpoint alone states a bound as a result. |
+
+So `0004`'s "one documented denominator" is untouched — it was always about comparing platforms —
+and workload characterisation is reported as a range. **The stateless number is never quoted alone
+as a description of the workload.**
+
+## 2. "O(1) per connection" is false at the rate this project committed to
+
+That phrasing assumes frames from one device arrive together. `0001` commits to line rate, where
+frames from thousands of devices **interleave**, so every frame needs a state lookup to find its
+cached entry. That is a per-frame cost — memory-bound rather than branch-bound, but per-frame.
+
+Cached does not remove a per-frame cost. **It trades a branch-heavy cost for a memory-heavy one.**
+
+## 3. The delta does not measure "dispatch cost"
+
+It measures **detection cost minus lookup cost**. Which of those dominates is decided by a
+parameter that was not declared as governing it:
+
+```
+few connections, table resident      delta ≈ detection cost      (useful)
+many interleaved, miss every frame   delta → 0, or negative      (measures nothing)
+```
+
+**Connection count is therefore not merely a parameter of the cached run — it decides what the
+second instrument measures at all.** It is promoted here to the same standing as resync rate:
+declared in advance, and named as a discriminator rather than a setting.
+
+## 4. Consequence for the stimulus contract
+
+Because the cache must be keyed on the transport connection rather than on frame contents
+(`bench/PROTOCOL-EVIDENCE.md` Finding 3 — verified and unconditional for GT06, whose non-login
+frames carry no device identifier at all), **the stimulus cannot be a flat byte stream.** It must
+carry connection identity, with connection count and interleaving pattern declared. This lands
+directly in the benchmark specification's input-contract section.
+
+## What this does not change
+
+The core argument is untouched. A cached reference would still implement Prediction B's position
+inside the artifact meant to settle A versus B, and stateless still does not presuppose A. Both
+modes are still built, in Phase 0, for the reason given above.

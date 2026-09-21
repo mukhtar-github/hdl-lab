@@ -8,7 +8,8 @@ engineering object and the product stay separate on the page as well as in the r
 Workload context : FleetPoynt (motivation only)
 Benchmark        : telematics frame decoding
 Protocols        : GT06 / JT/T 808 variants
-Input            : deterministic byte streams
+Input            : deterministic byte streams CARRYING CONNECTION IDENTITY
+                   (not a flat stream — see below)
 Output           : decoded frame records
 ```
 
@@ -89,13 +90,22 @@ Added from `PROTOCOL-EVIDENCE.md` — read out of the reference implementations,
   format. If that rate is non-zero the decoder cannot trust the dispatch key, and dispatch
   becomes speculative parse-validate-fallback. See `docs/decisions/0007`.
 
+**The input is not a flat byte stream.** `PROTOCOL-EVIDENCE.md` Finding 3: GT06 non-login frames
+contain no device identifier at all — Traccar associates them by `channel` + `remoteAddress`, the
+transport connection. So a flat stream cannot represent the GT06 workload even in principle, and
+the stimulus must carry connection identity with the interleaving pattern declared.
+
 Added by `docs/decisions/0007` — the detection-strategy decision:
 
 - **`detection_mode`** — `stateless` | `cached`. Required on **every** result, the stateless one
   included. A number that does not say which mode produced it cannot be compared with anything.
-- **Connection count** and **frames-per-connection distribution** — required for `cached` runs
-  only. The cached figure amortises detection over exactly these, so it means nothing without
-  them.
+- **Connection count** and **frames-per-connection distribution** — required on **every** run,
+  not just cached ones. `0007`'s amendment promotes connection count to a **discriminator**
+  alongside resync rate: it does not merely tune the cached figure, it decides whether the
+  stateless↔cached delta measures detection cost or measures nothing at all. See Prediction C.
+- **Connection interleaving pattern** — how frames from different connections are ordered. At
+  line rate they interleave; a stimulus that delivers each connection's frames contiguously
+  measures a locality that does not exist.
 
 > **The reference result is the `stateless` number.** The cached figure is reported beside it and
 > is never quoted as "the" reference — `0004` promises one documented denominator. The difference
