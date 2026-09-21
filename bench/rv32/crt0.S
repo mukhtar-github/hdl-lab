@@ -1,0 +1,19 @@
+# Bare-metal startup. No libc, no OS, no argv.
+    .section .text.init, "ax", @progbits
+    .globl _start
+_start:
+    la      sp, _stack_top
+
+    # Zero .bss. Deterministic startup state is part of a reproducible result:
+    # an uninitialised accumulator would make the answer depend on whatever
+    # the simulator happened to leave in memory.
+    la      t0, _bss_start
+    la      t1, _bss_end
+1:  bgeu    t0, t1, 2f
+    sw      zero, 0(t0)
+    addi    t0, t0, 4
+    j       1b
+2:
+    call    main
+    call    htif_exit          # main's return value is already in a0
+3:  j       3b

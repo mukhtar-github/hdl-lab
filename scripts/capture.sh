@@ -76,7 +76,8 @@ cat > "$DIR/manifest.md" << EOF
 | verilator | $(tool_version verilator --version) |
 | yosys | $(tool_version yosys -V) |
 | spike | $(tool_version spike --help) |
-| riscv gcc | $(tool_version riscv32-unknown-elf-gcc --version) |
+| riscv gcc | $(tool_version riscv64-elf-gcc --version) |
+| riscv binutils | $(tool_version riscv64-elf-ld --version) |
 | host | $(uname -sr) |
 
 ## Configuration
