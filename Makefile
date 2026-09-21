@@ -2,10 +2,11 @@
 # hdl-lab — RV32IM + telematics decode specialisation
 #
 #   make              run every testbench
-#   make mux          run one testbench (mux | adder | seq)
-#   make wave-mux     open its waveform in Surfer (wave-mux|wave-adder|wave-seq)
+#   make mux          run one testbench (mux | adder | seq | alu)
+#   make wave-mux     open its waveform in Surfer (wave-mux|wave-adder|wave-seq|wave-alu)
 #   make lint         static-check the RTL with Verilator — must stay green
 #   make lint-trap    demonstrate the linter catching the deliberate bug
+#   make mutate-alu   break the ALU 7 ways, prove the bench catches each
 #   make lint-file FILE=x.sv TOP=x    lint anything (Exercise 3 uses this)
 #   make clean        remove build artefacts
 # ============================================================
@@ -39,14 +40,15 @@ LINT_CLEAN := \
 	$(RTL)/03_sequential.sv:dff \
 	$(RTL)/03_sequential.sv:reg_en \
 	$(RTL)/03_sequential.sv:counter \
-	$(RTL)/03_sequential.sv:shift_nonblocking
+	$(RTL)/03_sequential.sv:shift_nonblocking \
+	$(RTL)/04_alu.sv,$(RTL)/02_adder.sv:alu
 
-.PHONY: all mux adder seq clean lint lint-trap lint-file
+.PHONY: all mux adder seq alu clean lint lint-trap lint-file mutate-alu
 
-all: mux adder seq
+all: mux adder seq alu
 	@echo ""
 	@echo "=========================================="
-	@echo " All Project 1 testbenches complete."
+	@echo " All testbenches complete."
 	@echo " Waveforms are in $(BUILD)/ — open one with:"
 	@echo "   make wave-mux | wave-adder | wave-seq"
 	@echo "=========================================="
@@ -69,6 +71,12 @@ seq: | $(BUILD)
 	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/seq.vvp $(RTL)/03_sequential.sv $(TB)/03_tb_sequential.sv
 	@$(VVP) $(BUILD)/seq.vvp
 
+# The ALU instantiates ripple_adder from 02_adder.sv — both files compile in.
+alu: | $(BUILD)
+	@echo "--- alu ---"
+	@$(IVERILOG) $(IVFLAGS) -o $(BUILD)/alu.vvp $(RTL)/04_alu.sv $(RTL)/02_adder.sv $(TB)/04_tb_alu.sv
+	@$(VVP) $(BUILD)/alu.vvp
+
 wave-mux:
 	$(WAVE) $(BUILD)/mux2.vcd &
 
@@ -77,6 +85,9 @@ wave-adder:
 
 wave-seq:
 	$(WAVE) $(BUILD)/sequential.vcd &
+
+wave-alu:
+	$(WAVE) $(BUILD)/alu.vcd &
 
 # ------------------------------------------------------------
 # Lint. Verilator catches what Icarus accepts happily but synthesis
@@ -89,7 +100,7 @@ wave-seq:
 lint:
 	@fail=0; \
 	for spec in $(LINT_CLEAN); do \
-		f=$${spec%%:*}; m=$${spec##*:}; \
+		f=$$(echo "$${spec%%:*}" | tr ',' ' '); m=$${spec##*:}; \
 		printf '  %-20s ' "$$m"; \
 		if $(VERILATOR) $(VLFLAGS) --top-module $$m $$f 2>&1 | grep -qE '%(Warning|Error)'; then \
 			echo "FAIL"; \
@@ -115,6 +126,10 @@ lint-trap:
 lint-file:
 	@test -n "$(FILE)" || { echo "usage: make lint-file FILE=x.sv TOP=modname"; exit 1; }
 	@$(VERILATOR) $(VLFLAGS) --top-module $(TOP) $(FILE) || true
+
+# A passing bench is evidence of nothing until you have watched it fail.
+mutate-alu:
+	@scripts/mutate-alu.sh
 
 clean:
 	rm -rf $(BUILD)

@@ -10,6 +10,9 @@ build/
 # macOS
 .DS_Store
 
+# Editor state — a recommendation list, not a build input.
+.vscode/
+
 # ------------------------------------------------------------------
 # Captured operational data — NEVER commit.
 # Decision 0001 and 0004: stimulus is synthesised from published
