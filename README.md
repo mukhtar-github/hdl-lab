@@ -38,13 +38,15 @@ theatre.
 
 ---
 
-## Current status — Phase 0
+## Current status — Phase 0 closing, Phase 1 started
 
 ```
 ✅ Icarus Verilog 13.0     ✅ mux2: structural + behavioral, 8/8 exhaustive
 ✅ Verilator 5.050         ✅ ripple_adder: 512/512 exhaustive
 ✅ Surfer 0.7.0            ✅ sequential: counter + shift-register pair
-                           ✅ make lint — 8 modules, green and meaningful
+❌ spike / riscv-gcc       ✅ alu: 207,232 cases vs golden model
+   (not installed)         ✅ make lint — 9 modules, green and meaningful
+                           ✅ make mutate-alu — 7/7 injected bugs killed
 ```
 
 **The Phase 0 gate is not "everything compiles."** It is:
@@ -52,10 +54,18 @@ theatre.
 > Introduce a bug deliberately and locate it by reading a waveform, without adding print
 > statements.
 
-That gate is now reachable — it was blocked until 2026-09-12 by a waveform viewer that had
-never once run (`docs/decisions/0005`). Exercise 2 below *is* the gate.
+**That gate is closed** — `docs/bugs/0002-adder-unknown`, diagnosed from the waveform with the
+mechanism withheld, which is a harder test than Exercise 2's self-planted bug. It was blocked
+until 2026-09-12 by a waveform viewer that had never once run (`docs/decisions/0005`).
 
-Next hardware step: `rtl/02_adder.sv`, then Exercise 2.
+**Phase 0 is not finished, though, and the remaining item is not a gate.** Decision `0004` is
+binding: the benchmark's stimulus generator, reference decoder and **Spike reference result** are
+Phase 0 work, built before the core executes them. None of it exists, and it is currently blocked
+on a missing RISC-V toolchain — `spike` and `riscv*-gcc` are absent from this machine. The roadmap
+places the benchmark in Phase 0 *"in parallel"* with the primitives, so Phase 1 work proceeding is
+not the benchmark sliding; letting the toolchain stay uninstalled would be.
+
+Next hardware step: the register file. Next Phase 0 step: install Spike.
 
 ---
 
@@ -93,9 +103,11 @@ Two simulators on purpose:
 ## Run it
 
 ```bash
-make            # all three testbenches — ends in three PASS lines
-make lint       # 8 modules, must stay green
+make            # all four testbenches — ends in four PASS lines
+make alu        # just the ALU: 207,232 cases against a golden model
+make lint       # 9 modules, must stay green
 make lint-trap  # watch the linter catch the deliberate bug
+make mutate-alu # break the ALU 7 ways, watch the bench catch every one
 make wave-seq   # open the sequential waveform in Surfer
 ```
 
@@ -119,6 +131,9 @@ module that is wrong on purpose.
 | `tb/02_tb_adder.sv` | Golden-model checking, exhaustive over 512 cases |
 | `rtl/03_sequential.sv` | Flip-flop, register with enable, counter; blocking vs non-blocking |
 | `tb/03_tb_sequential.sv` | Clock generation, reset sequencing, time-based checks |
+| `rtl/04_alu.sv` | Reusing your own module; one adder serving add/sub/slt/sltu; RV32I opcode encoding |
+| `tb/04_tb_alu.sv` | Directed edge sets + exhaustive-at-4-bits + seeded random, against one golden model |
+| `scripts/mutate-alu.sh` | Mutation testing: a passing bench is evidence of nothing until you have watched it fail |
 
 ## Do this before writing any new code
 
@@ -171,8 +186,17 @@ problem, not a chore.
 
 ## Next
 
-Project 2 is the ALU: the adder plus SUB, AND, OR, XOR, SLT and the shifts, behind a single
-opcode input. Then the register file. That is two of the three pieces a CPU needs.
+**Project 2, the ALU, is done** — `rtl/04_alu.sv`, passing the Phase 1 gate at 207,232 cases.
+One `ripple_adder` from `02_adder.sv` serves add, sub, slt and sltu, because a comparison is a
+subtraction whose difference you throw away. Ops are encoded as RV32I's `{funct7[5], funct3}`,
+so the Phase 2 decoder is a wire rather than a lookup table.
+
+Next is the register file: two read ports, one write port, `x0` hardwired to zero. That is two
+of the three pieces a CPU needs.
+
+Read `docs/bugs/0003-golden-model-sra` before writing the next testbench. The ALU's first run
+failed 6,080 cases and **the reference model was the thing that was wrong**, not the hardware.
+Arbitrate with arithmetic before editing either side.
 
 In parallel — and this is binding, see `docs/decisions/0004-benchmark-first.md` — the benchmark
 gets built now, not in Phase 4. A benchmark written after the core exists is shaped by what the
