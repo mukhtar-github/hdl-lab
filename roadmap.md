@@ -123,6 +123,32 @@ at them — `Zbc`'s `clmul` for CRC, `Zbb`'s `orc.b` for delimiter scanning. Rul
 standard/custom boundary fires before any custom encoding is considered. A genuinely possible
 Phase 5 finding is that custom space is never needed at all.
 
+### Prediction C — added 2026-09-21, before any measurement
+
+**A and B are a false dichotomy, and the real answer is a phase diagram with connection count as
+the boundary.** Each holds in its own region:
+
+```
+many connections, interleaved      caching impossible or a miss on every frame
+      → dispatch dominates                                   → Prediction A holds
+
+few connections, table resident    detection paid once, per-byte work remains
+      → checksum / destuffing dominates                      → Prediction B holds
+```
+
+Recorded now, while it is a guess and not yet obvious. It arrives from `0007`'s amendment: the
+stateless↔cached delta measures *detection minus lookup*, and which term dominates is set by
+connection count — so connection count is not a setting but a **second discriminator**, alongside
+resync rate.
+
+**Why it is worth recording rather than folding into A or B.** A phase diagram is a more useful
+Phase 4 result than a winner: it says *when* each mechanism matters, which is what a design
+decision actually needs. It is also falsifiable in a way A-versus-B is not — if one term dominates
+across the whole connection-count sweep, C is simply wrong and the sweep says so.
+
+**What would falsify it:** sweeping connection count from 1 to thousands, with resync rate held
+fixed, and finding no crossover — one term dominating throughout.
+
 ---
 
 ## The phases
