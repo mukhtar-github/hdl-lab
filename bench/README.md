@@ -89,6 +89,19 @@ Added from `PROTOCOL-EVIDENCE.md` — read out of the reference implementations,
   format. If that rate is non-zero the decoder cannot trust the dispatch key, and dispatch
   becomes speculative parse-validate-fallback. See `docs/decisions/0007`.
 
+Added by `docs/decisions/0007` — the detection-strategy decision:
+
+- **`detection_mode`** — `stateless` | `cached`. Required on **every** result, the stateless one
+  included. A number that does not say which mode produced it cannot be compared with anything.
+- **Connection count** and **frames-per-connection distribution** — required for `cached` runs
+  only. The cached figure amortises detection over exactly these, so it means nothing without
+  them.
+
+> **The reference result is the `stateless` number.** The cached figure is reported beside it and
+> is never quoted as "the" reference — `0004` promises one documented denominator. The difference
+> between the two *is* the dispatch-cost measurement, which is the half of Prediction A that
+> resync rate does not cover.
+
 **This list is still incomplete.** `docs/experiments/0001` is open and will add at least two more
 that have nothing to do with the protocol — they come from how the reference binary is *built*.
 Do not fill them in here before that experiment's hypothesis is written; the ordering is the
