@@ -80,6 +80,20 @@ Not left implicit — predictions A and B in `0001` diverge on exactly these:
 - **Frame length distribution**
 - **Generator seed**
 
+Added from `PROTOCOL-EVIDENCE.md` — read out of the reference implementations, not assumed:
+
+- **JT808 framing-mode mix** — `(`…`)` : `0x7e` : `0xe7`. This is *not* subsumed by variant mix:
+  the delimiter selects which of two escape alphabets the destuffing loop runs, and it resizes
+  the ID field independently of the version flag.
+- **Flag-lying rate** — frames whose `attribute` bit 14 disagrees with the payload's actual
+  format. If that rate is non-zero the decoder cannot trust the dispatch key, and dispatch
+  becomes speculative parse-validate-fallback. See `docs/decisions/0007`.
+
+**This list is still incomplete.** `docs/experiments/0001` is open and will add at least two more
+that have nothing to do with the protocol — they come from how the reference binary is *built*.
+Do not fill them in here before that experiment's hypothesis is written; the ordering is the
+point of the exercise.
+
 ## Malformed frames are a requirement, not an edge case
 
 The generator must emit malformed and variant frames **deliberately, at a realistic rate**. A
