@@ -17,6 +17,16 @@ Empty on purpose. Decision `docs/decisions/0004-benchmark-first.md` says what go
 in what order, and this file exists so the rules are in front of you on the day you start
 writing rather than in a document you have to remember to reopen.
 
+## Read `SPEC.md` first
+
+`bench/SPEC.md` is the frozen specification: protocols, frame types, input/output contract,
+malformed classes, resync model, detection strategy, size and provenance. Written **before** the
+reference decoder, per `decisions/0004`.
+
+Every line in it is marked **[V]** verified against source, **[D]** fixed by a decision record, or
+**[ ] unset**. The unset ones have no source yet and must not be filled in while writing code —
+declare them in the manifest as assumptions instead.
+
 ## What goes here
 
 ```
