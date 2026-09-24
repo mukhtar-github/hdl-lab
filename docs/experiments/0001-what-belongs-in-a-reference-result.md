@@ -15,16 +15,89 @@ this build's configuration?**
 
 ## Hypothesis
 
-<!-- WRITE THIS BEFORE RUNNING ANYTHING. That is the whole point of the file.
-     The output has four lines: crc_ref, acc, iters, instret. For each one,
-     predict whether rebuilding with a different compiler flag changes it, and
-     say WHY — name the mechanism, not just the direction. -->
+**Written 2026-09-24, before any of the six configurations was run.** Committed in its own commit,
+ahead of the first capture, so the ordering is a matter of git history rather than recollection.
+
+**Question:** what happens to the four output lines — `crc_ref`, `acc`, `iters`, `instret` —
+across `-O0`, `-O1`, `-O2`, `-O3`, `-Os`, and when the target ISA changes from `rv32im` to `rv32i`?
+
+### 1. `crc_ref` — unchanged in all six configurations
+
+The deterministic CRC of the same fixed 12-byte frame. Changing compiler strategy or the available
+instruction set should not change the program's mathematical result.
+
+### 2. `acc` — unchanged in all six configurations
+
+The compiler may implement the calculation differently, but the loop performs the same
+deterministic sequence of CRC calculations and accumulator updates, so any *correct* compilation
+must produce the same final value.
+
+### 3. `iters` — unchanged, decimal 1000 (`0x000003e8` as printed)
+
+`ITERS` is a compile-time constant `1000u`. No optimisation level or ISA choice changes that
+constant or the number of iterations the source requires.
+
+### 4. `instret` — changes significantly with optimisation level; little or no change from ISA
+
+Optimisation levels change how GCC transforms the program: function calls, register use, loop
+structure, constant propagation, inlining, unrolling. By contrast the dominant CRC operations are
+XOR, AND, shifts, loads, stores, additions, comparisons and branches, so the M extension's
+multiply/divide instructions are not expected to matter.
+
+Supporting arithmetic: the inner bit loop runs 96 times per `crc_itu()` call (12 bytes × 8 bits),
+so 96 × 1000 = 96,000 in the sweep plus 96 for the reference call — 96,096 inner iterations. The
+hot path is therefore:
+
+```c
+crc = (crc & 1u) ? (crc >> 1) ^ 0x8408 : crc >> 1;
+```
+
+which needs only base RV32I integer and control-flow operations.
+
+### Committed optimisation ordering
+
+Highest retired-instruction count to lowest:
+
+```
+-O0  >  -O1  >  -Os  >  -O2  >  -O3
+```
+
+- `-O0` — least optimisation, therefore the most instruction work.
+- `-O1` — removes some unnecessary work, conservative strategy.
+- `-Os` — optimises beyond `-O1` but prioritises *code size* over executed-instruction count, so
+  predicted to stay above the performance-oriented `-O2` and `-O3`.
+- `-O2` — more extensive optimisation, reduces executed work further.
+- `-O3` — **lowest**, via more aggressive transformations aimed at execution speed, including ones
+  that reduce loop overhead.
+
+### Committed ISA prediction
+
+```
+rv32im  ≈  rv32i        at every optimisation level
+```
+
+Any difference expected to be small compared with the differences caused by optimisation level.
+The CRC hot path contains no obvious multiplication or division, so removing M should not force a
+substantially different implementation.
 
 ## What would change my mind
 
-<!-- Also before the run. What would you have to see to conclude your split of
-     "reference" vs "configuration" was wrong? If you cannot answer this, you
-     are not running an experiment, you are collecting support for a conclusion. -->
+Falsified, or seriously weakened, by any of:
+
+- `crc_ref` changes between configurations.
+- `acc` changes between configurations.
+- `iters` is anything other than decimal 1000 (`0x000003e8`).
+- **Any adjacent pair out of the committed order** `-O0 > -O1 > -Os > -O2 > -O3`. Stated as an
+  exact criterion rather than "substantially different" because Spike is deterministic and has no
+  timing model — 20 consecutive runs were byte-identical including instruction count — so there is
+  no run-to-run scatter for an inversion to hide in. Any inversion is a real inversion.
+- `rv32i` consistently producing substantially more **or fewer** retired instructions than
+  `rv32im` at the same optimisation level.
+
+**The most interesting available falsification:** finding that the compiler emits an M-extension
+instruction for something that, read from the C source, appears to need no multiply or divide.
+That would mean the source-level mental model is incomplete, and would send me to the generated
+assembly rather than to the C.
 
 ## Method
 
