@@ -35,8 +35,20 @@ ABI     := ilp32
 TUNE    := rocket
 OPT     := -O2
 
+# decisions/0008: the source states the algorithm, and the compiler may not
+# substitute one. GCC 15+ recognises a bitwise CRC loop and swaps in an
+# algorithm of its own choosing: at -O2 it replaced the source's loop with a
+# 512-byte table (experiments/0001). Clear ALGOFLAGS only in an experiment
+# that is about that pass, and say so. Never for a reference result.
+ALGOFLAGS := -fno-optimize-crc
+
+# Which form of CRC-ITU crc_itu_ref.c runs. `table` is the reference.
+# `bitwise` is the definition, kept for experiments — never the reference.
+CRC_IMPL  := table
+
 ARCHFLAGS := -march=$(ARCH) -mabi=$(ABI) -mtune=$(TUNE) -mcmodel=medany
-CFLAGS    := $(ARCHFLAGS) $(OPT) -ffreestanding -fno-builtin -Wall -Wextra -Werror
+CFLAGS    := $(ARCHFLAGS) $(OPT) $(ALGOFLAGS) -DCRC_IMPL_$(CRC_IMPL) \
+             -ffreestanding -fno-builtin -Wall -Wextra -Werror
 LDFLAGS   := $(ARCHFLAGS) -nostdlib -nostartfiles -T link.ld \
              -Wl,--no-warn-rwx-segments   # no MMU here; one RWX LOAD segment is correct
 
