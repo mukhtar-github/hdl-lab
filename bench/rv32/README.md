@@ -33,7 +33,7 @@ reference program's instruction count is the decode work and nothing else.
 | `crt0.S` | Startup: set `sp`, zero `.bss`, call `main`, exit through HTIF |
 | `htif.h` / `htif.c` | `putchar` / `puts` / hex / `exit` over Spike's host-target interface |
 | `link.ld` | Loads at `0x80000000` (Spike's DRAM base); gives `tohost`/`fromhost` their own page |
-| `crc_itu_ref.c` | CRC-ITU over a GT06-shaped frame — the smallest real piece of the decoder |
+| `crc_itu_ref.c` | CRC-ITU over a GT06-shaped frame — the smallest real piece of the decoder. Two forms, chosen with `CRC_IMPL`: `table` is the reference, `bitwise` is the definition (`decisions/0008`) |
 | `crc_oracle.py` | An independent CRC-16/X-25, anchored to published values, that checks a run's reference lines |
 | `Makefile` | `make`, `make run`, `make check`, `make dump`, `make clean` |
 
@@ -89,6 +89,11 @@ binary.
 `check` passing means the reference lines match a CRC computed by a different path from this
 program's. Six builds agreeing with *each other* would not mean that: six compilations of a wrong
 CRC agree perfectly.
+
+**What the reference runs is stated, not chosen by the compiler** (`decisions/0008`). The
+reference is `CRC_IMPL=table`, the byte-wise reflected table, built with `-fno-optimize-crc`, so
+no compiler can swap in an algorithm of its own. At -O2 in `experiments/0001` it had done exactly
+that. `CRC_IMPL=bitwise` is the definition, kept for experiments and never quoted as the reference.
 
 Do not record a number from any of this by hand. Use `scripts/capture.sh`, which writes the
 commit, the working-tree state and every tool version alongside the output.

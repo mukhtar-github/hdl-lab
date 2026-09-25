@@ -56,6 +56,8 @@ This layer becomes the design-rationale section of anything you eventually publi
 | `0004-benchmark-first.md` | The benchmark exists before the processor |
 | `0005-waveform-viewer.md` | Surfer, not GTKWave — and why |
 | `0006-reading-discipline.md` | Specs and implementations, not domain material |
+| `0007-variant-detection-strategy.md` | Stateless is the reference; cached is the instrument |
+| `0008-source-states-the-algorithm.md` | The reference runs the algorithm and the work its source states |
 
 ## Layer 3 — `results/`
 
