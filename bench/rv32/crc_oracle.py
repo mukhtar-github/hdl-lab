@@ -34,13 +34,16 @@ ANCHORS = [
     # [V] RevEng CRC catalogue, CRC-16/IBM-SDLC (alias X-25): check=0x906e.
     #     https://reveng.sourceforge.io/crc-catalogue/16.htm
     (b"123456789", 0x906E, "RevEng catalogue check value"),
-    # [ ] The GT06 protocol document's login example,
-    #     78 78 0D 01 01 23 45 67 89 01 23 45 00 01 8C DD 0D 0A
-    #     with the CRC over length byte .. serial number. Recalled, not yet
-    #     pinned to a document and page. The catalogue algorithm reproducing
-    #     its 8C DD is a 1-in-65,536 check on the bytes, and on the claim that
-    #     GT06 uses CRC-16/X-25 over exactly that span.
+    # [V] GT06 GPS Tracker Communication Protocol v1.8.1 (Concox), §5.1.3, PDF
+    #     page 12 (printed 11); SHA-256 adbb99f6…33e8, see reference/README.md.
+    #     The login example, CRC over length byte .. serial number:
+    #       78 78 0D 01 01 23 45 67 89 01 23 45 00 01 8C DD 0D 0A
+    #     (The document's hex string has a typo, "78 780 0D"; the byte-by-byte
+    #     row beneath it gives 78 78 0D.) This also checks the claim that GT06
+    #     uses CRC-16/X-25 over exactly that span.
     (bytes.fromhex("0D0101234567890123450001"), 0x8CDD, "GT06 login example"),
+    # [V] Same page: the server's response, 78 78 05 01 00 01 D9 DC 0D 0A.
+    (bytes.fromhex("05010001"), 0xD9DC, "GT06 login response"),
 ]
 
 # The workload. This must match crc_itu_ref.c; if it drifts, acc and iters
