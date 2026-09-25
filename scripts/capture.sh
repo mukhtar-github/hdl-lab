@@ -7,7 +7,8 @@
 #   scripts/capture.sh adder-exhaustive make adder
 #
 # Writes docs/results/<timestamp>-<label>/ containing manifest.md,
-# stdout.txt, stderr.txt and a diff of any uncommitted changes.
+# stdout.txt, stderr.txt, a diff of any uncommitted changes, and a
+# hashed list of any untracked files.
 # Runnable from anywhere in the tree — the output path is resolved
 # from the repository root, not from your current directory.
 #
@@ -38,6 +39,41 @@ if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; th
     git diff HEAD > "$DIR/uncommitted.diff" 2>/dev/null
 fi
 
+# `git diff` cannot see untracked files, and a build can still read one — an
+# untracked header, a stray source file. Listed with their hashes, since there
+# is no diff to show. docs/results/ is excluded: captures land there, and no
+# build reads it. Ignored files (build/) are not listed; the Makefile's hashed
+# build directories are what guard those (docs/bugs/0004).
+UNTRACKED="$(git -C "$ROOT" ls-files --others --exclude-standard -- . ':(exclude)docs/results' 2>/dev/null)"
+if [ -n "$UNTRACKED" ]; then
+    (cd "$ROOT" && printf '%s\n' "$UNTRACKED" | while IFS= read -r f; do
+        shasum -a 256 -- "$f"
+    done) > "$DIR/untracked.txt"
+    NOTE="UNTRACKED — $(printf '%s\n' "$UNTRACKED" | wc -l | tr -d ' ') file(s) not in git, see untracked.txt"
+    if [ "$DIRTY" = "clean" ]; then DIRTY="$NOTE"; else DIRTY="$DIRTY; $NOTE"; fi
+fi
+
+# The command exactly as it would have to be typed again. `$*` joined the
+# arguments with spaces, so "OPT=-O2 -fno-optimize-crc" came back as two
+# arguments — and a command that cannot be retyped is not provenance.
+quote() {
+    local a out=""
+    for a in "$@"; do
+        case "$a" in
+            *\'*) out="$out $(printf '%q' "$a")" ;;
+            "" | *[!A-Za-z0-9_./:=,+@%-]*) out="$out '$a'" ;;
+            *) out="$out $a" ;;
+        esac
+    done
+    printf '%s' "${out# }"
+}
+CMD="$(quote "$@")"
+
+# A relative command means nothing without the directory it ran in.
+HERE="$(pwd -P)"
+RUN_FROM="${HERE#"$(cd "$ROOT" && pwd -P)"}"
+RUN_FROM="./${RUN_FROM#/}"
+
 tool_version() {
     if command -v "$1" >/dev/null 2>&1; then
         # single line, pipe-escaped so it can't break the markdown table
@@ -58,7 +94,8 @@ cat > "$DIR/manifest.md" << EOF
 # ${LABEL}
 
 - **Captured (UTC):** ${TS}
-- **Command:** \`$*\`
+- **Command:** \`${CMD}\`
+- **Run from:** \`${RUN_FROM}\` (relative to the repository root)
 - **Exit status:** ${STATUS}
 - **Wall time:** $((END - START))s
 

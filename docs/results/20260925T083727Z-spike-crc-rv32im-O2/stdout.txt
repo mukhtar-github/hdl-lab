@@ -1,0 +1,6 @@
+rm -rf build
+--- build/crc_itu_ref.elf   (spike --isa=rv32im) ---
+crc_ref  = 0x4cd4
+acc      = 0x33cc525d
+iters    = 000003e8
+instret  = 00099f7d
