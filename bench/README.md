@@ -122,10 +122,33 @@ Added by `docs/decisions/0007` — the detection-strategy decision:
 > between the two *is* the dispatch-cost measurement, which is the half of Prediction A that
 > resync rate does not cover.
 
-**This list is still incomplete.** `docs/experiments/0001` is open and will add at least two more
-that have nothing to do with the protocol — they come from how the reference binary is *built*.
-Do not fill them in here before that experiment's hypothesis is written; the ordering is the
-point of the exercise.
+Added by `docs/experiments/0001`. These have nothing to do with the protocol: they come from how
+the binary is *built*, and each one was demonstrated by a run rather than assumed.
+
+- **Compiler identity and tuning.** Record the version, and also the defaults that the version line
+  does not show. `-mtune` defaulted to `rocket` without appearing anywhere, and `sifive-7-series`
+  moved the count, so `bench/rv32/Makefile` now pins it.
+- **Effective compiler flags.** Record what the compiler was given, not what was typed. A stale
+  build once reported -O2's number under an -O3 command (`docs/bugs/0004`).
+- **ISA and ABI**, for the compiler *and* the simulator. These are two parameters, even where one
+  variable sets both.
+- **Loaded-image hash.** SHA-256 of `objcopy -O binary`. This is the check on everything above,
+  because it identifies what executed. Different configurations can produce one image, and one flag
+  can change the image without changing the count.
+- **Metric and window.** For example `instret` over `[t0, t1)` on Spike, where `cycle` equals
+  `instret`. A number called "cycles" that came from Spike is not a cycle count.
+
+`bench/rv32`'s harness prints the first four in every run's output, so `scripts/capture.sh` records
+them without being told.
+
+**The reference lines are admission, not decoration.** A result whose reference lines fail the
+oracle (`bench/rv32/crc_oracle.py` today, the reference decoder's expected output later) is not
+compared with anything.
+
+**Stimulus must be opaque to the compiler.** Frames reach the decoder as data the compiler cannot
+see at compile time, never as a `static const` array in a header it compiles against. In
+`experiments/0001`, a build that could see its input hoisted the CRC of the bytes it could prove
+unchanged. It did a sixth of the declared work and still printed every reference line correctly.
 
 ## Malformed frames are a requirement, not an edge case
 
