@@ -1,7 +1,8 @@
 # 0008 — The reference binary runs the algorithm, and the work, that its source states
 
 - **Date:** 2026-09-25
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-09-25**: see *Amendment* at the end. The decision is
+  unchanged; a claim marked `[ ]` has been verified.
 - **Phase:** 0 (policy), binding on every reference result
 
 ## Context
@@ -119,3 +120,19 @@ At -O1, -O3 and -Os, its instruction count stays within 20% of the -O2 figure (1
 comparison, the bitwise program's -O1 retired 25% more than its -O2, and a single pass toggle moved
 its -O3 by 6×. If any of the three lands outside ±20%, stating the algorithm did less to stabilise
 the reference than this decision assumes.
+
+# Amendment — 2026-09-25
+
+The decision stands. One claim in *Options considered*, option 3, was marked `[ ]`: that the GT06
+protocol document's own reference code is this algorithm. It is now verified.
+
+- **Source:** *GT06 GPS Tracker Communication Protocol* v1.8.1 (Concox), Appendix A, PDF page 37
+  (printed 36). The file is pinned by SHA-256 in `reference/README.md`.
+- **`crctab16`** has 256 entries, identical entry for entry to `crc_itu_table`.
+- **`GetCrc16`** initialises `fcs = 0xffff`, steps `fcs = (fcs >> 8) ^ crctab16[(fcs ^ *pData) & 0xff]`,
+  and returns `~fcs`. That is the loop in `crc_itu_ref.c`.
+
+What changes: option 3 is no longer just the ordinary software form of this CRC. It is the form the
+protocol's vendor publishes. The *Revisit if* condition "the GT06 document's reference code turns
+out to be something other than this table" is closed.
+

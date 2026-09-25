@@ -39,7 +39,9 @@ static uint8_t frame[12] = {
 // Entry i is the bitwise definition below applied to the single byte i:
 //   for i in range(256): c = i; repeat 8: c = (c >> 1) ^ 0x8408 if c & 1 else c >> 1
 // The sweep in main uses all 256 indices, so a wrong entry changes acc and
-// fails `make check`.
+// fails `make check`. Identical, entry for entry, to crctab16 in the GT06
+// protocol document v1.8.1, Appendix A (pinned in reference/README.md).
+// GetCrc16 there is the loop below.
 static const uint16_t crc_itu_table[256] = {
     0x0000, 0x1189, 0x2312, 0x329B, 0x4624, 0x57AD, 0x6536, 0x74BF,
     0x8C48, 0x9DC1, 0xAF5A, 0xBED3, 0xCA6C, 0xDBE5, 0xE97E, 0xF8F7,
