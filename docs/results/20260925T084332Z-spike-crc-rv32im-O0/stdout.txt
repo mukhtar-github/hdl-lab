@@ -1,0 +1,13 @@
+--- build/b317162d54e7/crc_itu_ref.elf   (spike --isa=rv32im) ---
+cc       = riscv64-elf-gcc (GCC) 16.2.0
+cflags   = -march=rv32im -mabi=ilp32 -mtune=rocket -mcmodel=medany -O0 -ffreestanding -fno-builtin -Wall -Wextra -Werror
+image    = sha256:99dcd97e17d068b2784cda2a1f70629768f3351c7fb7baa30e6750b366aa7047
+crc_ref  = 0x4cd4
+acc      = 0x33cc525d
+iters    = 000003e8
+instret  = 001ac202
+oracle: anchors reproduced — RevEng catalogue check value 0x906E, GT06 login example 0x8CDD
+crc_ref  0x4cd4       ok
+acc      0x33cc525d   ok
+iters    0x3e8        ok
+oracle: PASS
