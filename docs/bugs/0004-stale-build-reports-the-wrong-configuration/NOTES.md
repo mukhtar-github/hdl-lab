@@ -15,6 +15,14 @@
   carried no trace of which flags had produced the binary. `capture.sh` recorded the command it was
   given — which was true, and was not the configuration that ran.
 
-- **Fix:** the next commit on the branch. The flags are written to a stamp file that the ELF depends
-  on, rewritten only when they change; `make run` prints the effective flags and a SHA-256 of the
-  loaded image before running, so every capture now records what actually executed.
+- **Fix:** each build now lives in `build/<hash>/`, named by a hash of the compiler's identity,
+  every flag and the bytes of every input, so one configuration cannot run another's binary. And
+  `make run` prints the effective flags and a SHA-256 of the loaded image before running, so every
+  capture records what actually executed.
+
+- **The first fix failed the same way, more quietly.** A flags stamp that the ELF depended on,
+  rewritten only when the flags changed. Switching O2 → O3 → O2 with no pause left the O3 binary
+  running under the O2 command: this host's GNU make 3.81 compares mtimes to the second, and a
+  stamp rewritten in the same second as the last build does not count as newer. Humans rarely
+  switch configurations within a second. A capture script does it every time. Hence no
+  timestamps at all.
