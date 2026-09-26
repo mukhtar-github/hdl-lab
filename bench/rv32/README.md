@@ -43,7 +43,7 @@ reference program's instruction count is the decode work and nothing else.
 |---|---|---|
 | Compiler | `riscv64-elf-gcc` 16.2.0 | `brew install riscv64-elf-gcc` (bottled) |
 | Binutils | `riscv64-elf-ld` 2.47 | dependency of the above |
-| Simulator | Spike **1.1.0**, tag `v1.1.0`, commit `530af85d83781a3dae31a4ace84a573ec255fefa` | built from source, see below |
+| Simulator | Spike **1.1.0**, tag `v1.1.0`, commit `530af85d83781a3dae31a4ace84a573ec255fefa`, configured `--enable-commitlog` | built from source, see below |
 
 **Spike was not installed from the Homebrew tap, deliberately.** The tap's formula is
 `url "https://github.com/riscv/riscv-isa-sim.git"` with `version "main"` — an *unpinned* git
@@ -59,9 +59,20 @@ git clone --depth 1 --branch v1.1.0 \
     https://github.com/riscv-software-src/riscv-isa-sim.git
 cd riscv-isa-sim && git rev-parse HEAD   # must be 530af85d83781a3dae31a4ace84a573ec255fefa
 mkdir build && cd build
-../configure --prefix="$HOME/.local" --without-boost --without-boost-asio --without-boost-regex
+../configure --prefix="$HOME/.local" --without-boost --without-boost-asio --without-boost-regex \
+             --enable-commitlog
 make -j"$(sysctl -n hw.ncpu)" && make install
 ```
+
+**Rebuilt 2026-09-26 with `--enable-commitlog`**, same tag and commit. `spike --log-commits`
+now prints every register and memory write, one line per retired instruction. That is what
+checking the core against Spike instruction by instruction will need.
+
+The rebuild was verified before it replaced anything. On six builds (the table form at -O0, -O2
+and -O3; rv32i; the bitwise form with and without GCC's CRC pass), the program output and the
+full `-l` execution trace, up to 1.3 million lines, were byte-identical to the previous
+binary's. The version line reads `1.1.0` either way, so this paragraph is the only place the
+difference is recorded.
 
 ## Run it
 
