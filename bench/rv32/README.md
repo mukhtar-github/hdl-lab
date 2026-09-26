@@ -35,7 +35,8 @@ reference program's instruction count is the decode work and nothing else.
 | `link.ld` | Loads at `0x80000000` (Spike's DRAM base); gives `tohost`/`fromhost` their own page |
 | `crc_itu_ref.c` | CRC-ITU over a GT06-shaped frame — the smallest real piece of the decoder. Two forms, chosen with `CRC_IMPL`: `table` is the reference, `bitwise` is the definition (`decisions/0008`) |
 | `crc_oracle.py` | An independent CRC-16/X-25, anchored to published values, that checks a run's reference lines |
-| `Makefile` | `make`, `make run`, `make check`, `make dump`, `make clean` |
+| `crc_anatomy.py`, `crc_anatomy.html` | `make anatomy`: the CRC Byte Anatomy page. One byte of each CRC form, instruction by instruction, from Spike's commit log |
+| `Makefile` | `make`, `make run`, `make check`, `make anatomy`, `make dump`, `make clean` |
 
 ## Toolchain, pinned
 

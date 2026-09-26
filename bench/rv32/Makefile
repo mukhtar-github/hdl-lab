@@ -5,6 +5,7 @@
 #   make run        build and run each one under Spike
 #   make check      run, then hold the reference lines to crc_oracle.py
 #   make dump       disassemble
+#   make anatomy    the CRC Byte Anatomy page, from Spike's commit log
 #   make clean
 #
 # Homebrew's riscv64-elf-gcc is a FREESTANDING compiler: there is no
@@ -75,7 +76,7 @@ BUILD     := build/$(CONFIG_ID)
 ELFS    := $(addprefix $(BUILD)/,$(addsuffix .elf,$(PROGS)))
 IMAGES  := $(ELFS:.elf=.bin)
 
-.PHONY: all run check clean dump
+.PHONY: all run check clean dump anatomy
 
 all: $(ELFS)
 
@@ -110,6 +111,12 @@ check: $(ELFS) $(IMAGES)
 	@$(MAKE) --no-print-directory run > $(BUILD)/run.out || { cat $(BUILD)/run.out; exit 1; }
 	@cat $(BUILD)/run.out
 	@$(PYTHON) crc_oracle.py $(BUILD)/run.out
+
+# One byte of each CRC form, instruction by instruction, from Spike's commit log.
+# Builds its own three configurations whatever variables this make was given;
+# stops if the code GCC emits no longer matches the notes written for it.
+anatomy:
+	@$(PYTHON) crc_anatomy.py
 
 dump: $(ELFS)
 	@for e in $(ELFS); do $(OBJDUMP) -d $$e | head -40; done

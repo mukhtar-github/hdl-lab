@@ -1,0 +1,453 @@
+<title>CRC Byte Anatomy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --ink: #121a24;
+  --ink-2: #465163;
+  --muted: #6f7988;
+  --hair: #dde2e8;
+  --hair-strong: #c6cdd6;
+  --wash: #e8f0fb;
+  --focus: #1f5fbf;
+  --c-lookup: #2a78d6;
+  --c-reverse: #eb6834;
+  --c-bits: #1baf7a;
+  --c-loop: #b3bac4;
+  --flash: #fff1c2;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11151b; --panel: #181d25; --ink: #eef2f6; --ink-2: #aeb8c4; --muted: #8290a0;
+    --hair: #29313c; --hair-strong: #3a4452; --wash: #1c2a3e; --focus: #6aa3f0;
+    --c-lookup: #3987e5; --c-reverse: #d95926; --c-bits: #199e70; --c-loop: #56606d; --flash: #3a3218;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11151b; --panel: #181d25; --ink: #eef2f6; --ink-2: #aeb8c4; --muted: #8290a0;
+  --hair: #29313c; --hair-strong: #3a4452; --wash: #1c2a3e; --focus: #6aa3f0;
+  --c-lookup: #3987e5; --c-reverse: #d95926; --c-bits: #199e70; --c-loop: #56606d; --flash: #3a3218;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1060px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; display: grid; gap: 44px; }
+h1, h2 { font-family: var(--cond); font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.05; }
+h2 { font-size: 22px; line-height: 1.2; }
+p { margin: 0; max-width: 66ch; }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; }
+header { display: grid; gap: 14px; }
+.lede { font-size: 17px; color: var(--ink-2); }
+.lede b { color: var(--ink); font-weight: 600; }
+.io { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 14px; color: var(--ink-2); }
+.io span b { color: var(--ink); font-weight: 500; }
+section { display: grid; gap: 18px; }
+.section-head { display: grid; gap: 6px; }
+.section-head p { color: var(--ink-2); }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.sw.lookup { background: var(--c-lookup); } .sw.reverse { background: var(--c-reverse); }
+.sw.bits { background: var(--c-bits); } .sw.loop { background: var(--c-loop); }
+
+/* strips */
+.strips { display: grid; gap: 22px; background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; padding: 22px 22px 18px; }
+.srow { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 6px 14px; align-items: center; }
+.srow .who { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.srow .who b { font-weight: 600; }
+.srow .who .cfg { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.cells { display: grid; grid-template-columns: repeat(var(--max), minmax(0, 1fr)); column-gap: 2px; height: 30px; cursor: pointer; }
+.cell { border-radius: 2px; height: 100%; transition: transform .12s ease; }
+.cell.lookup { background: var(--c-lookup); } .cell.reverse { background: var(--c-reverse); }
+.cell.bits { background: var(--c-bits); } .cell.loop { background: var(--c-loop); }
+.cell.on { outline: 2px solid var(--ink); outline-offset: 1px; position: relative; z-index: 1; }
+.count { font-family: var(--mono); font-size: 13px; color: var(--ink-2); text-align: right; line-height: 1.2; }
+.count b { display: block; font-family: var(--sans); font-size: 22px; font-weight: 600; color: var(--ink); }
+.anat { grid-column: 1 / -1; font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.anat .formula { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.axis { display: grid; grid-template-columns: minmax(0, 1fr) 76px; column-gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.axis div { position: relative; height: 18px; border-top: 1px solid var(--hair); }
+.axis div span { position: absolute; top: 4px; transform: translateX(-50%); }
+.axis div span:first-child { transform: none; }
+@media (max-width: 560px) {
+  .strips { padding: 16px 14px 14px; }
+  .cells { column-gap: 1px; height: 26px; }
+  .srow, .axis { grid-template-columns: minmax(0, 1fr) 56px; column-gap: 10px; }
+  .count b { font-size: 18px; }
+}
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--hair-strong); border-radius: 8px; padding: 8px 10px; font-size: 13px; max-width: 300px; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.tip .t-asm { font-family: var(--mono); font-weight: 500; }
+.tip .t-cat { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+
+/* stepper */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { font: 500 14px var(--sans); color: var(--ink-2); background: transparent; border: 1px solid var(--hair-strong); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab:focus-visible, .btn:focus-visible, .cells:focus-visible, tr:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.story { color: var(--ink-2); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn { font: 500 14px var(--sans); color: var(--ink); background: var(--panel); border: 1px solid var(--hair-strong); border-radius: 7px; padding: 6px 12px; cursor: pointer; min-width: 44px; }
+.btn:hover { border-color: var(--ink-2); }
+.btn[disabled] { opacity: .45; cursor: default; }
+.pos { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.keys { font-size: 12px; color: var(--muted); margin-left: auto; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .stage { grid-template-columns: 1fr; } .state { order: -1; } .keys { margin-left: 0; } }
+.listbox { background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; max-height: 640px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--hair); z-index: 1; }
+tbody td { padding: 5px 10px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: color-mix(in srgb, var(--wash) 55%, transparent); }
+tbody tr.on td { background: var(--wash); }
+tbody tr.on td:first-child { box-shadow: inset 3px 0 0 var(--ink); }
+td.n, td.pc { font-family: var(--mono); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.asm { font-family: var(--mono); white-space: nowrap; }
+td.note { color: var(--ink-2); min-width: 220px; }
+td.note .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); margin-right: 6px; white-space: nowrap; }
+td.note .tag .sw { width: 9px; height: 9px; border-radius: 2px; }
+td.wr { font-family: var(--mono); white-space: nowrap; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { td.pc, th.pc { display: none; } }
+
+.state { background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; padding: 16px; display: grid; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 860px) { .state { position: static; } }
+.crcbox { display: grid; gap: 2px; }
+.crcbox .lab { font-size: 12px; color: var(--muted); }
+.crcbox .val { font-family: var(--mono); font-size: 30px; font-weight: 500; letter-spacing: 0.02em; }
+.now { display: grid; gap: 4px; border-top: 1px solid var(--hair); padding-top: 12px; }
+.now .asm { font-family: var(--mono); font-weight: 500; }
+.now .note { color: var(--ink-2); font-size: 14px; }
+.now .cat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.regs { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-family: var(--mono); font-size: 13px; border-top: 1px solid var(--hair); padding-top: 12px; }
+.regs .r { color: var(--muted); }
+.regs .v { font-variant-numeric: tabular-nums; border-radius: 3px; padding: 0 3px; margin-left: -3px; }
+.regs .v.hit { background: var(--flash); }
+.regs .c { color: var(--muted); font-family: var(--sans); font-size: 12px; }
+.memline { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.sub { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); grid-column: 1 / -1; margin-top: 4px; font-family: var(--sans); }
+
+/* provenance */
+.prov { display: grid; gap: 10px; color: var(--ink-2); font-size: 14px; }
+.prov pre { margin: 0; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; color: var(--ink); line-height: 1.6; }
+.prov table { font-size: 13px; }
+.prov td, .prov th { padding: 6px 10px; border-bottom: 1px solid var(--hair); text-align: left; }
+.prov th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.prov .tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; }
+.prov td.num { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">bench/rv32 · Spike 1.1.0 commit log · CRC-16/X-25 on RV32IM</div>
+    <h1>CRC Byte Anatomy</h1>
+    <p class="lede" id="lede"></p>
+    <div class="io" id="io"></div>
+  </header>
+
+  <section aria-labelledby="h-strips">
+    <div class="section-head">
+      <h2 id="h-strips">Instructions per byte</h2>
+      <p>One cell per executed instruction, in the order Spike retired them. Hover for the instruction; click to step through it below.</p>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="strips" id="strips"></div>
+  </section>
+
+  <section aria-labelledby="h-step" id="stepper">
+    <div class="section-head">
+      <h2 id="h-step">Step through the byte</h2>
+    </div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <p class="story" id="story"></p>
+    <div class="controls">
+      <button class="btn" id="b-reset" type="button">Reset</button>
+      <button class="btn" id="b-prev" type="button" aria-label="Previous instruction">←</button>
+      <button class="btn" id="b-next" type="button" aria-label="Next instruction">→</button>
+      <button class="btn" id="b-play" type="button">Play</button>
+      <span class="pos" id="pos"></span>
+      <span class="keys">Keys: ← → step</span>
+    </div>
+    <div class="stage">
+      <div class="listbox" id="listbox">
+        <table>
+          <thead><tr><th>#</th><th class="pc">Address</th><th>Instruction</th><th>What it does</th><th>Writes</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <aside class="state" id="state" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-prov" class="prov">
+    <div class="section-head">
+      <h2 id="h-prov">Where the numbers come from</h2>
+      <p>Each run's instruction count is the per-byte cost times 12,012 bytes (1,001 CRCs of 12 bytes), plus about 18 instructions per CRC spent outside the byte loop.</p>
+    </div>
+    <div class="tablewrap"><table id="prov-table"></table></div>
+    <p id="meta"></p>
+    <p>The window is the first byte of the reference CRC: from its first <code>lbu</code>, which loads the frame's first byte, to the next one. Regenerate the page with <code>make -C bench/rv32 anatomy</code>.</p>
+    <pre>make -C bench/rv32 run CRC_IMPL=bitwise                 # the bitwise definition
+make -C bench/rv32 run CRC_IMPL=bitwise ALGOFLAGS=      # GCC's substituted table
+make -C bench/rv32 run                                  # the stated table (reference)
+spike -l --log-commits --log=trace.log --isa=rv32im build/&lt;hash&gt;/crc_itu_ref.elf</pre>
+  </section>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const DATA = __DATA__;
+const CATS = {
+  lookup: "Table lookup",
+  reverse: "Bit reversal",
+  bits: "Bit steps",
+  loop: "Loop bookkeeping",
+};
+const ORDER = ["lookup", "reverse", "bits", "loop"];
+const progs = DATA.programs;
+const byId = Object.fromEntries(progs.map(p => [p.id, p]));
+const MAX = Math.max(...progs.map(p => p.steps.length));
+const fmt = n => n.toLocaleString("en-US");
+const hex4 = v => v == null ? "—" : "0x" + (parseInt(v, 16) & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+const hex8 = v => v == null ? "—" : "0x" + parseInt(v, 16).toString(16).padStart(8, "0");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+let cur = { prog: "gcc", i: -1 };
+let timer = null;
+try { const s = localStorage.getItem("crc-anatomy-prog"); if (s && byId[s]) cur.prog = s; } catch (e) {}
+
+/* legend */
+const legend = document.getElementById("legend");
+ORDER.forEach(c => { const s = el("span"); s.append(el("i", "sw " + c), CATS[c]); legend.append(s); });
+
+/* strips */
+const strips = document.getElementById("strips");
+const cellRefs = {};
+progs.forEach(p => {
+  const row = el("div", "srow");
+  const who = el("div", "who");
+  who.append(el("b", null, p.name), el("span", "cfg", p.config));
+  const cells = el("div", "cells");
+  cells.style.setProperty("--max", MAX);
+  cells.tabIndex = 0;
+  cells.setAttribute("role", "img");
+  cells.setAttribute("aria-label", `${p.name}: ${p.steps.length} instructions per byte. ` +
+    ORDER.filter(c => p.counts[c]).map(c => `${p.counts[c]} ${CATS[c].toLowerCase()}`).join(", "));
+  cellRefs[p.id] = p.steps.map((s, i) => {
+    const c = el("span", "cell " + s.cat);
+    c.dataset.prog = p.id; c.dataset.i = i;
+    cells.append(c); return c;
+  });
+  cells.addEventListener("keydown", e => { if (e.key === "Enter") { select(p.id, 0); document.getElementById("listbox").scrollIntoView({ block: "nearest" }); } });
+  const count = el("div", "count"); count.append(el("b", null, String(p.steps.length)), "per byte");
+  const anat = el("div", "anat");
+  anat.append(el("span", null, ORDER.filter(c => p.counts[c]).map(c => `${p.counts[c]} ${CATS[c].toLowerCase()}`).join(" · ")));
+  anat.append(el("span", "formula", `${p.steps.length} × 12,012 + ${fmt(p.outside)} = ${fmt(p.instret)} instret`));
+  row.append(who, cells, count, anat);
+  strips.append(row);
+});
+const axis = el("div", "axis");
+const ax = el("div");
+[0, 10, 20, 30, 40, 50, 60, 70].forEach(t => { const s = el("span", null, String(t)); s.style.left = (t / MAX * 100) + "%"; ax.append(s); });
+axis.append(ax, el("span"));
+strips.append(axis);
+
+/* tooltip */
+const tip = document.getElementById("tip");
+strips.addEventListener("mouseover", e => {
+  const c = e.target.closest(".cell"); if (!c) return;
+  const p = byId[c.dataset.prog], s = p.steps[+c.dataset.i];
+  tip.innerHTML = "";
+  const a = el("div", "t-asm", `${+c.dataset.i + 1}. ${s.asm}`);
+  const cat = el("div", "t-cat"); cat.append(el("i", "sw " + s.cat), CATS[s.cat]);
+  tip.append(a, cat, el("div", null, s.note));
+  tip.hidden = false;
+});
+strips.addEventListener("mousemove", e => {
+  if (tip.hidden) return;
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if (x + w > innerWidth - 8) x = e.clientX - w - pad;
+  if (y + h > innerHeight - 8) y = e.clientY - h - pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+});
+strips.addEventListener("mouseout", e => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest(".cell")) tip.hidden = true; });
+strips.addEventListener("click", e => {
+  const c = e.target.closest(".cell"); if (!c) return;
+  select(c.dataset.prog, +c.dataset.i);
+});
+
+/* tabs */
+const tabs = document.getElementById("tabs");
+progs.forEach(p => {
+  const t = el("button", "tab", p.name);
+  t.type = "button"; t.setAttribute("role", "tab"); t.dataset.prog = p.id;
+  t.addEventListener("click", () => select(p.id, -1));
+  tabs.append(t);
+});
+
+/* controls */
+const $ = id => document.getElementById(id);
+$("b-reset").addEventListener("click", () => { stop(); go(-1); });
+$("b-prev").addEventListener("click", () => { stop(); go(cur.i - 1); });
+$("b-next").addEventListener("click", () => { stop(); go(cur.i + 1); });
+$("b-play").addEventListener("click", () => timer ? stop() : play());
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input, textarea, select, .tablewrap, pre")) return;
+  const n = byId[cur.prog].steps.length;
+  if (e.key === "ArrowRight") { stop(); go(cur.i + 1); e.preventDefault(); }
+  else if (e.key === "ArrowLeft") { stop(); go(cur.i - 1); e.preventDefault(); }
+  else if (e.key === "Home" && e.target.closest && e.target.closest("#stepper")) { stop(); go(-1); e.preventDefault(); }
+  else if (e.key === "End" && e.target.closest && e.target.closest("#stepper")) { stop(); go(n - 1); e.preventDefault(); }
+});
+function play() {
+  const n = byId[cur.prog].steps.length;
+  if (cur.i >= n - 1) go(-1);
+  $("b-play").textContent = "Pause";
+  timer = setInterval(() => {
+    if (cur.i >= byId[cur.prog].steps.length - 1) { stop(); return; }
+    go(cur.i + 1);
+  }, 420);
+}
+function stop() { if (timer) { clearInterval(timer); timer = null; } $("b-play").textContent = "Play"; }
+
+function select(prog, i) {
+  stop();
+  const changed = prog !== cur.prog;
+  cur.prog = prog;
+  try { localStorage.setItem("crc-anatomy-prog", prog); } catch (e) {}
+  if (changed || !rowsBuilt) buildRows();
+  go(i);
+}
+
+/* rows */
+let rowsBuilt = false, rowEls = [];
+function buildRows() {
+  const p = byId[cur.prog];
+  const tb = $("rows"); tb.innerHTML = "";
+  rowEls = p.steps.map((s, i) => {
+    const tr = el("tr");
+    tr.addEventListener("click", () => { stop(); go(i); });
+    const note = el("td", "note");
+    const tag = el("span", "tag"); tag.append(el("i", "sw " + s.cat), CATS[s.cat]);
+    note.append(tag, s.note);
+    const wr = s.w.length ? s.w.map(([r, v]) => `${r} = ${hex8(v)}`).join(" ") : "";
+    tr.append(el("td", "n", String(i + 1)), el("td", "pc", s.pc.replace(/^0x/, "")), el("td", "asm", s.asm), note, el("td", "wr", wr));
+    tb.append(tr); return tr;
+  });
+  rowsBuilt = true;
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.prog === cur.prog)));
+  $("story").textContent = p.story;
+}
+
+function stateAt(p, i) {
+  const regs = Object.assign({}, p.init);
+  let lastMem = null, touched = new Set();
+  for (let k = 0; k <= i; k++) {
+    const s = p.steps[k];
+    s.w.forEach(([r, v]) => { regs[r] = v; if (k === i) touched.add(r); });
+    if (s.mem) lastMem = { addr: s.mem, val: s.w[0] ? s.w[0][1] : null, k };
+  }
+  return { regs, lastMem, touched };
+}
+
+function go(i) {
+  const p = byId[cur.prog], n = p.steps.length;
+  i = Math.max(-1, Math.min(n - 1, i));
+  cur.i = i;
+  rowEls.forEach((tr, k) => tr.classList.toggle("on", k === i));
+  Object.entries(cellRefs).forEach(([id, cs]) => cs.forEach((c, k) => c.classList.toggle("on", id === cur.prog && k === i)));
+  if (i >= 0) {
+    const box = $("listbox"), tr = rowEls[i];
+    const top = tr.offsetTop - box.querySelector("thead").offsetHeight;
+    if (top < box.scrollTop || tr.offsetTop + tr.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, top - box.clientHeight / 3);
+  } else { $("listbox").scrollTop = 0; }
+  $("b-prev").disabled = i < 0;
+  $("b-next").disabled = i >= n - 1;
+  $("pos").textContent = i < 0 ? `before instruction 1 of ${n}` : `instruction ${i + 1} of ${n}`;
+  renderState(p, i);
+}
+
+function renderState(p, i) {
+  const st = stateAt(p, i);
+  const box = $("state"); box.innerHTML = "";
+  const crc = el("div", "crcbox");
+  crc.append(el("span", "lab", `CRC register (${p.crc}), low 16 bits`), el("span", "val", hex4(st.regs[p.crc])));
+  box.append(crc);
+  const now = el("div", "now");
+  if (i < 0) {
+    now.append(el("span", "asm", "Ready"), el("span", "note", "Nothing executed yet for this byte. Step forward to run the first instruction."));
+  } else {
+    const s = p.steps[i];
+    const cat = el("span", "cat"); cat.append(el("i", "sw " + s.cat), CATS[s.cat]);
+    now.append(el("span", "asm", s.asm), el("span", "note", s.note), cat);
+  }
+  box.append(now);
+  const regs = el("div", "regs");
+  regs.append(el("span", "sub", "Registers this byte writes"));
+  p.show.forEach(r => {
+    regs.append(el("span", "r", r));
+    const v = el("span", "v" + (st.touched.has(r) ? " hit" : ""), hex8(st.regs[r]));
+    regs.append(v);
+  });
+  regs.append(el("span", "sub", "Held constant through the loop"));
+  Object.entries(p.consts).forEach(([r, what]) => {
+    regs.append(el("span", "r", r));
+    const v = el("span", "v"); v.append(hex8(st.regs[r]) + " ", el("span", "c", what));
+    regs.append(v);
+  });
+  box.append(regs);
+  if (st.lastMem) box.append(el("div", "memline", `last load: ${st.lastMem.addr} → ${hex8(st.lastMem.val)} (instr ${st.lastMem.k + 1})`));
+}
+
+/* provenance table */
+(function () {
+  const t = $("prov-table");
+  const head = el("tr"); ["Program", "Build", "Per byte", "× 12,012", "Outside the loop", "instret", "Loaded image", "Capture"].forEach(h => head.append(el("th", null, h)));
+  const thead = el("thead"); thead.append(head); t.append(thead);
+  const tb = el("tbody");
+  progs.forEach(p => {
+    const tr = el("tr");
+    tr.append(el("td", null, p.name), el("td", "mono", p.config), el("td", "num", String(p.steps.length)),
+      el("td", "num", fmt(p.steps.length * 12012)), el("td", "num", fmt(p.outside)), el("td", "num", fmt(p.instret)),
+      el("td", "mono", p.image + "…"), el("td", "mono", p.capture ? "docs/results/" + p.capture : "not captured"));
+    tb.append(tr);
+  });
+  t.append(tb);
+})();
+
+/* header and provenance text, from the data */
+(function () {
+  const sorted = progs.slice().sort((a, b) => a.steps.length - b.steps.length);
+  const lede = $("lede");
+  lede.append("Three programs take the same byte and the same CRC and produce the same answer. One spends ");
+  sorted.forEach((p, k) => {
+    lede.append(el("b", null, k === 0 ? `${p.steps.length} instructions` : String(p.steps.length)));
+    lede.append(k === 0 ? " on it, one " : k === 1 ? ", one " : ". ");
+  });
+  lede.append("Every instruction below was logged by Spike as it ran, with the register it wrote.");
+  const p0 = progs[0], io = $("io");
+  [["byte in", "0x" + (parseInt(p0.byteIn, 16) & 0xFF).toString(16).toUpperCase().padStart(2, "0")],
+   ["CRC before", hex4(p0.crcBefore)], ["CRC after", hex4(p0.crcAfter)]].forEach(([k, v]) => {
+    const s = el("span", null, k + " "); s.append(el("b", null, v)); io.append(s);
+  });
+  io.append(el("span", null, "first byte of the GT06 login frame"));
+  const m = DATA.meta;
+  $("meta").append("Generated from commit ", el("code", null, m.commit + (m.dirty ? " (with uncommitted changes)" : "")),
+    ` with ${m.cc} and ${m.spike}, built with `, el("code", null, "--enable-commitlog"), ".");
+})();
+
+buildRows();
+go(-1);
+</script>
