@@ -2,7 +2,8 @@
 
 - **Date:** 2026-09-25
 - **Status:** Accepted, **amended 2026-09-25**: see *Amendment* at the end. The decision is
-  unchanged; a claim marked `[ ]` has been verified.
+  unchanged; a claim marked `[ ]` has been verified. **Prediction tested 2026-09-26**: see
+  *Prediction outcome*.
 - **Phase:** 0 (policy), binding on every reference result
 
 ## Context
@@ -135,4 +136,29 @@ protocol document's own reference code is this algorithm. It is now verified.
 What changes: option 3 is no longer just the ordinary software form of this CRC. It is the form the
 protocol's vendor publishes. The *Revisit if* condition "the GT06 document's reference code turns
 out to be something other than this table" is closed.
+
+# Prediction outcome — 2026-09-26
+
+**The prediction held as stated.** The table reference at the other three optimisation levels, each
+captured from a clean tree and passing the oracle:
+
+| Level | `instret` | vs -O2 (138,137) | Capture |
+|---|---:|---:|---|
+| -O1 | 143,143 | +3.6% | [`20260926T062541Z-spike-crc-table-rv32im-O1`](../results/20260926T062541Z-spike-crc-table-rv32im-O1/) |
+| -O3 | 121,115 | −12.3% | [`20260926T062541Z-spike-crc-table-rv32im-O3`](../results/20260926T062541Z-spike-crc-table-rv32im-O3/) |
+| -Os | 157,150 | +13.8% | [`20260926T062542Z-spike-crc-table-rv32im-Os`](../results/20260926T062542Z-spike-crc-table-rv32im-Os/) |
+
+All three are inside ±20%. (The -O3 figure was first seen, uncaptured, while Spike was being
+rebuilt the same day. These captures are the record.)
+
+**The belief behind it held only partly.** The prediction's headline was "far less sensitive to
+optimisation level than the bitwise program was". By the stated test, the worst deviation from
+-O2, that is true: 13.8% here against the bitwise program's 25.1% at -O1. But the full spread
+across the four optimised levels is about the same. It is 121,115 to 157,150 (1.30×) here, against
+630,653 to 788,692 (1.25×) for the bitwise program in `experiments/0001`.
+
+What stating the algorithm removed is the large swing, the 6× that one pass toggle produced by
+substituting an algorithm and hoisting work. It did not remove the ordinary ±15% of optimisation
+level. So flags remain configuration, declared on every result, exactly as 0001 requires. The
+stated algorithm protects *what* is measured; it does not make *how it was compiled* stop mattering.
 
