@@ -168,6 +168,15 @@ here."
 
 ---
 
+## Outside the layers — `HANDOFF.md`
+
+`docs/HANDOFF.md` is where the next working session starts. It is derived, not a record:
+everything in it should also be in the journal, a decision record or git. Each handoff overwrites
+it, and git keeps the earlier ones (`git log -p -- docs/HANDOFF.md`). Check it against the live
+state before acting on it.
+
+---
+
 ## Open questions
 
 Keep this list short and dated. Questions get answered or explicitly deferred — never left to
