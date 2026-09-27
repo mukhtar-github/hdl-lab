@@ -5,6 +5,9 @@ Everything here was read out of Traccar's source at pinned commit
 are from that commit. Nothing here is from vendor marketing, forum summaries or explainers — per
 `docs/decisions/0006`, specifications and implementations only.
 
+Findings 4 and 5 also read the GT06 vendor document, v1.8.1, pinned by SHA-256 in the same README.
+Every number in Findings 4 to 6 comes from one capture of `bench/evidence/checksums.py`.
+
 **Why this file exists.** The benchmark's shape depends on claims about how much these protocols
 actually vary. Those claims circulate mostly in domain material of poor provenance. This file
 holds only what can be checked against code, with a citation for each.
@@ -138,6 +141,136 @@ The conclusion survives, but only via the flag-lying route above — and the dif
 because it decides the scope. On the stated reasoning, transport-layer keying would be required
 always. On the real one, it is required always for GT06 (verified) and only-if-flag-lying for
 JT808 (unsourced).
+
+---
+
+## Finding 4 — nobody checks the checksum of a received frame
+
+Capture: [`20260927T062216Z-protocol-checksums`](../docs/results/20260927T062216Z-protocol-checksums/),
+section 2.
+
+The GT06 vendor document requires the check: "CRC error occur when the received information is
+calculated, the receiver will ignore and discard the data packet" (§4.6, PDF page 10).
+
+Traccar computes a checksum in three places, and none of them is on the receive path:
+
+| Line | In | What it computes |
+|---|---|---|
+| `Gt06ProtocolDecoder.java:280` | `sendResponse()` | the CRC-ITU of a reply Traccar sends |
+| `Jt808ProtocolDecoder.java:146` | `formatMessage()` | the XOR check of a message Traccar sends |
+| `Jt808ProtocolDecoder.java:277` | `decodeId()` | a Luhn digit for an IMEI-form ID, not a frame check |
+
+Neither frame decoder computes one at all. **A frame with a wrong checksum is decoded exactly like
+a correct one**, in both protocols.
+
+**Why it matters here.** Prediction B has GT06-heavy traffic making the CRC "the only O(n) pass".
+In the de facto implementation, that pass does not run on receive. A well-formed GT06 frame is framed
+by reading its length field and checking two bytes (`Gt06FrameDecoder.java:40-47`). After that, no
+loop runs over its bytes: the decoder reads each field once, where it sits. JT808 differs. Its
+destuffing loop runs over every byte whether or not anything validates
+(`Jt808FrameDecoder.java:65-88`).
+
+The benchmark decoder validates, because SPEC §3's `crc_fail` status requires it and the vendor
+document says to. So in this benchmark, **the CRC's per-byte cost is the cost of conforming to the
+specification, not the cost of what the de facto decoder does.** Both are legitimate to measure,
+but they are different claims. If Phase 4 finds that the CRC dominates, it must say which one it
+measured.
+
+---
+
+## Finding 5 — the GT06 vendor's own examples fail its own check
+
+Capture: [`20260927T062216Z-protocol-checksums`](../docs/results/20260927T062216Z-protocol-checksums/),
+section 1. Page numbers are the PDF's; the printed number is one lower.
+
+The document gives three example frames sent by a device. As printed, one of them verifies:
+
+| Example | Where | Length field | Bytes it should count | CRC printed | CRC computed |
+|---|---|---:|---:|---|---|
+| login | §5.1.3, p.12 | 13 | 13 | `0x8cdd` | `0x8cdd` |
+| location `0x12` | §5.2.2, p.16 | 31 | 31 | `0x8081` | `0x7377` |
+| heartbeat `0x13` | §5.4.3, p.26 | 8 | 10 | `0x061f` | `0xf8b5` |
+
+The two server replies on the same pages both verify. Each failure has an explanation that the
+document itself supplies, and each one checks out:
+
+- **The location example has a one-byte typo.** Exactly one single-byte change makes its CRC verify:
+  byte 10, `0xcc` to `0xcf`. The document's own field table on p.13 prints that byte as `0xCF`. With
+  it, the frame verifies. That corrected frame is a byte-exact anchor for anything that encodes
+  `0x12`.
+- **The heartbeat's length and CRC were computed for a different frame.** No single-byte change
+  repairs it. Its length field counts 8 bytes where 10 follow. Delete the two Alarm/Language bytes,
+  `00 01`, which the example labels "Reserved bit (Language)", and both verify:
+  `78 78 08 13 4B 04 03 00 11 06 1F 0D 0A`. So the length and the CRC describe a heartbeat whose
+  information content is 3 bytes. The 2-byte Alarm/Language field was added to the example later
+  without recomputing either. The field table on p.24 includes it, so the table and the example
+  describe two versions of the frame.
+
+**What this establishes.** The vendor's own material contains a bad-checksum frame and a
+length-field disagreement, two of SPEC §4's malformed classes. A decoder that obeys p.10 would
+discard two of the vendor's three examples as printed.
+
+**What it does not establish.** Anything about devices. These are errors in a document. That some
+devices send the 3-byte heartbeat is plausible from this, and not shown by it.
+
+---
+
+## Finding 6 — Traccar's test inputs would fail a validating decoder
+
+Capture: [`20260927T062216Z-protocol-checksums`](../docs/results/20260927T062216Z-protocol-checksums/),
+section 3.
+
+Traccar's unit tests feed its decoders hex frames, mostly from real devices and forum posts. They are
+counted here and never committed (`bench/README` rule 2a).
+
+| | GT06 | JT808 |
+|---|---:|---:|
+| frames | 185 | 114 |
+| checksum fails | 27 | 11 |
+| length field disagrees with the bytes present | 15 | 9 |
+
+The GT06 failures span 14 protocol numbers, among them 2 logins and 1 location `0x12`. 8 of the 11
+JT808 failures are location reports, `0x0200`. 5 JT808 inputs contain an unescaped `0x7e` between
+their delimiters, which `Jt808FrameDecoder` would have split. The tests never see that, because
+they feed the protocol decoder directly.
+
+**What this establishes.** Traccar could not start validating checksums without failing its own
+tests. Whatever the original reason for Finding 4, the test suite now depends on it.
+
+**What it does not establish: a rate.** These are unit-test inputs, chosen to cover code paths,
+and some may have been edited. Anonymising an IMEI without recomputing the CRC would produce exactly
+these failures. **None of these counts may be used as a malformed rate in the stimulus.** SPEC §4's
+"rates for every class: unset" stands.
+
+The same count shows one more thing, worth a sentence: **no test input uses the `0xe7` delimiter.**
+Finding 2's alternative framing and its escape alphabet are implemented in Traccar, and untested
+there.
+
+---
+
+## Finding 7 — the GT06 variant is chosen from the length field
+
+`decodeVariant()` (`Gt06ProtocolDecoder.java:1642-1703`) runs first on every frame (`:491`). It
+picks the variant from the start bytes, the protocol number and **the length field**. For the two
+non-login types in SPEC §2, with start bytes `78 78`:
+
+| Protocol number | Length | Variant |
+|---|---|---|
+| `0x12` | `0x21` | `BENWAY` |
+| `0x12` | `0x24` | `VXT01` |
+| `0x12` | `0x29` | `WETRUST` |
+| `0x12` | `0x2b` | `S5` |
+| `0x12` | `0x71` or more | `GT06E_CARD` |
+| `0x13` | `0x13` | `OBD6` |
+| either, any other length | | `STANDARD` |
+
+So `STANDARD` means "a length that no variant rule claims". The vendor's layouts give `0x1f` for
+`0x12` (p.13) and `0x0a` for `0x13` (p.24). Both are `STANDARD`.
+
+**Consequence: a length-field error can change which decoder runs.** A `0x12` frame whose length
+reads `0x21` instead of `0x1f` is decoded as `BENWAY`. So in Traccar, SPEC §4's length-disagreement
+class and §1's variant dispatch are not independent. Whether they are independent in the benchmark
+decoder is a property of its design, and must be stated when it is written.
 
 ---
 
