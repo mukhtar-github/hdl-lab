@@ -10,6 +10,9 @@ build/
 # macOS
 .DS_Store
 
+# Python bytecode. This Mac's system Python caches it outside the tree; others write it here.
+__pycache__/
+
 # Editor state — a recommendation list, not a build input.
 .vscode/
 

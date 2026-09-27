@@ -13,9 +13,19 @@ Input            : deterministic byte streams CARRYING CONNECTION IDENTITY
 Output           : decoded frame records
 ```
 
-Empty on purpose. Decision `docs/decisions/0004-benchmark-first.md` says what goes here and
-in what order, and this file exists so the rules are in front of you on the day you start
-writing rather than in a document you have to remember to reopen.
+Decision `docs/decisions/0004-benchmark-first.md` says what goes here and in what order, and this
+file exists so the rules are in front of you on the day you start writing rather than in a
+document you have to remember to reopen.
+
+Built so far, in `0004`'s order:
+
+| Directory | What it is |
+|---|---|
+| `stimulus/` | The stimulus generator. Frames from the specifications, traffic from stated assumptions. |
+| `rv32/` | The bare-metal harness and Spike, proven on one kernel, CRC-ITU. Not the benchmark. |
+| `evidence/` | Scripts that derive the numbers in `PROTOCOL-EVIDENCE.md`. |
+
+Next is the reference decoder.
 
 ## Read `SPEC.md` first
 

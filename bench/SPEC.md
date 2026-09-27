@@ -1,6 +1,8 @@
 # Telematics Frame Decoder Benchmark — specification
 
 - **Version:** draft 1 — **frozen before the reference decoder is written**, per `decisions/0004`
+- **Amended 2026-09-27:** see *Amendment* at the end. Writing the stimulus generator found
+  unset parameters that the list below does not name. Nothing already here changes.
 - **Date:** 2026-09-21
 - **Classification:** specification-derived reconstruction (`bench/README.md` rule 3)
 
@@ -194,3 +196,38 @@ frame length distribution
 **None has a source.** Each is either swept (resync rate, connection count — both named
 discriminators) or must be declared in the manifest as a stated assumption. A result quoting any
 of them as settled is quoting an invented number.
+
+---
+
+# Amendment — 2026-09-27: what writing the generator found unset
+
+The specification stands. Writing `bench/stimulus` against it found five more things that shape
+the stimulus and that the list above does not name. They are unset in the same sense, with no
+source, and the generator requires each one to be stated:
+
+| Parameter | Why it is a parameter | In `bench/stimulus` |
+|---|---|---|
+| JT808 header-format mix, 2013 : 2019 | §1 puts both formats in scope, and gives no proportion. | `jt808.version_weights` |
+| Message-type mix, per protocol | §2 lists the types, and gives no proportion. | `gt06.type_weights`, `jt808.type_weights` |
+| Chunk-size distribution | §3 says chunks are not frame-aligned, and gives no size. | `chunk_size` |
+| Garbage alphabet | §5 gives a rate and a run length, not the bytes. Garbage that contains a frame-start byte makes a false start, which is different work from skipping. | `garbage.alphabet` |
+| Field-value distributions | They decide how often a JT808 byte must be escaped, so the destuffing work in Prediction B depends on them. | rule R6; each manifest reports the escape pairs |
+
+"Frame length distribution" in the list above turns out to be several knobs: the type mix, the
+records per batch, the additional-information items per location, and the length of an
+authentication code.
+
+The generator's structural choices are listed as rules R1 to R17 in `bench/stimulus/README.md`.
+Each is an assumption, and none fills a `[ ]` above.
+
+§3's `(connection_id, byte_chunk)` pairs now have a concrete form, `stimulus.bin`, specified in
+the same README.
+
+Two facts found while laying out the frames bear on §4. They are recorded in
+`bench/PROTOCOL-EVIDENCE.md`:
+
+- **Finding 4.** Neither Traccar decoder verifies the checksum of a frame it receives. The
+  `crc_fail` status in §3 is the benchmark decoder conforming to the GT06 vendor document, not
+  doing what the de facto decoder does.
+- **Finding 7.** Traccar chooses the GT06 variant from the length field, so a length fault can
+  change which decoder runs.
