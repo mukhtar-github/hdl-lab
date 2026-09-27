@@ -1,0 +1,10 @@
+stimulus  sha256:dfd8239bf80d8b97e4beabcef1f4347ee27031e7ff3ac2049f152fa1dd709ece  14260 bytes, 484 chunks
+intent    sha256:0e93f887e9b8e97e5763a37b914272a8b6a8bc9761d193566e5d84b3516e3c04
+frames    240 on 12 connections, 203 split across chunks
+type      gt06 0x01 5, gt06 0x08 1, gt06 0x12 66, gt06 0x13 28, gt06 0x3a 1, gt06 0x3e 1, gt06 0x43 1, jt808 0x0102 7, jt808 0x0200 57, jt808 0x0704 34, jt808 0x0f04 1, jt808 0x0f05 1, jt808 0x0f0a 2, jt808 0x0f0b 1, jt808 0x0f0f 1, jt808 0x5501 17, jt808 sentence 16
+framing   7878 103, 7e 61, e7 60, paren 16
+fault     bad_checksum 10, flag_lying 6, length_disagreement 5, none 198, truncated 11, unknown_type 10
+garbage   23 runs, 268 bytes
+escapes   28 pairs in 8327 bytes of JT808 frames (rule R6)
+written   build/coverage-1/  (stimulus.bin, intent.jsonl, manifest.json)
+check: PASS. 240 frames and 484 chunks on 12 connections agree with intent.jsonl; the hashes match manifest.json.
