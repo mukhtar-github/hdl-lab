@@ -1,0 +1,64 @@
+CRC-16/X-25 from bench/rv32/crc_oracle.py; its anchors reproduced: RevEng catalogue check value, GT06 login example, GT06 login response
+
+Inputs (reference/, gitignored; Traccar at 847edd2c8c4dcc47426fb76b7800b342dea3cde6):
+  adbb99f64b3b84c2296b274d59c96f85cd316a1cfd1434ab0a2870ab72b633e8  GT06_GPS_Tracker_Communication_Protocol_v1.8.1.pdf
+  69c48c0e70bab70f2396912db5db9a803a504aac1ed70164a000f37f02eef092  Gt06FrameDecoder.java
+  dcdcba464fbfbe800480d7b6fb1317b638a059a041d8a2edfe8b471e4c5ca0b7  Gt06ProtocolDecoder.java
+  138f4c54dd9bb93ea01d50a25fa5b8122691b822b0cb5f358700e70432318f34  Jt808FrameDecoder.java
+  e2df238ff89fcbda9cefc5e58120f31e9711d0f42258ae8932ce6717eb5e3ac9  Jt808ProtocolDecoder.java
+  35d9a9719dc30733d227490b5b95faf16b0862fc9a58b1261dd6b2c1691ea769  Gt06ProtocolDecoderTest.java
+  1ca9c37cf813f6b186c86c6454649f87b474e9a0d843f4d95967999fa473db2e  Jt808ProtocolDecoderTest.java
+  (The vendor examples in section 1 are transcribed in this file, not read from the PDF.)
+
+## 1. The GT06 vendor document's example frames
+
+example              where           length field  bytes counted  CRC printed  CRC computed  verdict
+login                §5.1.3, p.12              13             13       0x8cdd        0x8cdd  verifies
+login response       §5.1.3, p.12               5              5       0xd9dc        0xd9dc  verifies
+location 0x12        §5.2.2, p.16              31             31       0x8081        0x7377  FAILS: CRC
+heartbeat 0x13       §5.4.3, p.26               8             10       0x061f        0xf8b5  FAILS: CRC, length
+heartbeat response   §5.4.3, p.26               5              5       0xf970        0xf970  verifies
+
+Device-sent examples that verify as printed: 1 of 3.
+
+location 0x12: every single-byte repair that makes its printed CRC verify:
+  frame offset 10: 0xcc -> 0xcf
+  the field table on p.13 gives offset 10 as 0xcf. With it, the CRC is 0x8081 (printed 0x8081).
+
+heartbeat 0x13: single-byte repairs that make its printed CRC verify: 0
+  without its two Alarm/Language bytes (78 78 08 13 4b 04 03 00 11 06 1f 0d 0a):
+  length field 8, bytes counted 8; CRC printed 0x061f, computed 0x061f
+
+## 2. Where Traccar's decoders compute a checksum
+
+Gt06ProtocolDecoder.java: 1 use(s) of Checksum
+  :280   in sendResponse()   response.writeShort(Checksum.crc16(Checksum.CRC16_X25,
+Jt808ProtocolDecoder.java: 2 use(s) of Checksum
+  :146   in formatMessage()   buf.writeByte(Checksum.xor(buf.nioBuffer(1, buf.readableBytes() - 1)));
+  :277   in decodeId()   return String.valueOf(imei) + Checksum.luhn(imei);
+Gt06FrameDecoder.java: 0 use(s) of Checksum
+Jt808FrameDecoder.java: 0 use(s) of Checksum
+
+## 3. Traccar's own test frames (inputs to its unit tests, not traffic)
+
+Gt06ProtocolDecoderTest.java: 187 binary test inputs
+  frames                                           185
+  CRC-ITU verifies                                 158
+  CRC-ITU fails                                    27
+  length field disagrees with the bytes present    15
+  not a 0x7878/0x7979 … 0x0D0A frame               2
+  CRC-ITU fails, by protocol number: 0x01×2, 0x10×1, 0x11×1, 0x12×1, 0x17×4, 0x19×1, 0x21×1, 0x22×1, 0x27×1, 0x2e×1, 0x69×7, 0x95×4, 0xa4×1, 0xfd×1
+  SPEC §2 types (verifies / fails): 0x01 5/2, 0x12 12/1, 0x13 9/0
+
+Jt808ProtocolDecoderTest.java: 115 binary test inputs
+  frames                                               114
+  delimiter 0x7e                                       114
+  delimiter 0xe7                                       0
+  attribute bit 14 set                                 2
+  XOR check verifies                                   103
+  XOR check fails                                      11
+  body-length field disagrees with the bytes present   9
+  an unescaped delimiter between the delimiters        5
+  not delimiter-framed (7e/e7)                         1
+  XOR check fails, by message type: 0x0200×8, 0x0900×2, 0x5501×1
+  SPEC §2 types present: 0x0102×3, 0x0200×71, 0x0704×8, 0x5501×5
