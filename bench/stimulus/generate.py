@@ -84,7 +84,7 @@ def realized(conns, chunks):
         n, pos = 0, 0
         for seg in conn.segments:
             r = seg.record
-            c[f"bytes.{conn.protocol}"] += len(seg.data)
+            c[f"bytes.{conn.protocol}.{seg.kind}"] += len(seg.data)
             if seg.kind == "garbage":
                 c["garbage.runs"] += 1
                 c["garbage.bytes"] += len(seg.data)
@@ -161,8 +161,10 @@ def main(argv=None):
           f"{stats['frames_split_across_chunks']} split across chunks")
     for key in ("frames_by_type", "frames_by_framing", "frames_by_fault"):
         print(f"{key[10:]:9} " + ", ".join(f"{k} {v}" for k, v in stats[key].items()))
-    print(f"garbage   {stats['counts'].get('garbage.runs', 0)} runs, "
-          f"{stats['counts'].get('garbage.bytes', 0)} bytes")
+    counts = stats["counts"]
+    print(f"garbage   {counts.get('garbage.runs', 0)} runs, {counts.get('garbage.bytes', 0)} bytes")
+    print(f"escapes   {counts.get('jt808.escape_pairs', 0)} pairs in "
+          f"{counts.get('bytes.jt808.frame', 0)} bytes of JT808 frames (rule R6)")
     print(f"written   {args.out}/  (stimulus.bin, intent.jsonl, manifest.json)")
     return 0
 
