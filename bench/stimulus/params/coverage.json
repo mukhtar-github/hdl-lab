@@ -1,0 +1,26 @@
+{
+  "purpose": "COVERAGE ONLY. Chosen so that every frame type, framing mode, header format, fault class and garbage run in bench/SPEC.md §1-5 occurs in a run small enough to read. No value here is a claim about traffic. No result may be quoted from a stimulus made with this file.",
+  "connections": 12,
+  "frames": 240,
+  "assignment": "uniform",
+  "protocol_weights": {"gt06": 1, "jt808": 1},
+  "gt06": {"type_weights": {"location": 3, "status": 1}},
+  "jt808": {
+    "delimiter_weights": {"7e": 1, "e7": 1},
+    "version_weights": {"2013": 1, "2019": 1},
+    "type_weights": {"location": 3, "batch": 1, "location2": 1, "sentence": 1},
+    "batch_records": [1, 4],
+    "location_items": [0, 4],
+    "auth_code_length": [6, 16]
+  },
+  "faults_ppm": {
+    "truncated": 40000,
+    "bad_checksum": 40000,
+    "length_disagreement": 40000,
+    "unknown_type": 40000,
+    "flag_lying": 80000
+  },
+  "garbage": {"rate_ppm": 60000, "length": [1, 24], "alphabet": "no_sync"},
+  "chunk_size": [1, 48],
+  "interleave": "uniform"
+}
