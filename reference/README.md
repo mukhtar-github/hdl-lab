@@ -19,6 +19,14 @@ two halves of Prediction A in `decisions/0001`, so read them as separate concern
 | **Fields** — dispatch, unpack, checksum | `Gt06ProtocolDecoder.java` (77 KB) | `Jt808ProtocolDecoder.java` (95 KB) |
 | Wiring / registration | `Gt06Protocol.java` | `Jt808Protocol.java` |
 
+Added 2026-09-27, from the same commit:
+
+| File | Why it is here |
+|---|---|
+| `Jt600ProtocolDecoder.java` | `decodeBinaryLocation()`, which JT808 message `0x5501` delegates to (`Jt808ProtocolDecoder.java:1526`). The benchmark's `0x5501` frames are laid out from it. |
+| `BcdUtil.java`, `BitUtil.java`, `Checksum.java` | Helpers the decoders call. Read for exact semantics: an odd BCD digit count peeks at the next byte without consuming it, and `CRC16_X25` is CRC-16/X-25. |
+| `Gt06ProtocolDecoderTest.java`, `Jt808ProtocolDecoderTest.java`, `Jt808FrameDecoderTest.java` | Traccar's unit tests. **Their frames are real-device and forum hex** (`bench/README` rule 2a), so they are only counted, locally, by `bench/evidence/checksums.py`. None of their bytes is committed. |
+
 **Read the size ratio carefully.** ~30-40x more code in field handling than framing tells you
 where the *variant complexity* lives. It says nothing about where the *cycles* go — a 77 KB
 decoder may execute one narrow path per frame while a 2 KB frame decoder runs over every byte.
@@ -28,9 +36,10 @@ Do not let a source-size observation quietly become evidence for a cycle-count c
 ## Provenance
 
 - **Source:** https://github.com/traccar/traccar
-- **Path:** `src/main/java/org/traccar/protocol/`
-- **Fetched:** 2026-09-17
-- **Pinned commit:** `847edd2c8c4dcc47426fb76b7800b342dea3cde6`
+- **Path:** `src/main/java/org/traccar/protocol/`, and since 2026-09-27 also
+  `src/main/java/org/traccar/helper/` and `src/test/java/org/traccar/protocol/`
+- **Fetched:** 2026-09-17; the files added above on 2026-09-27
+- **Pinned commit:** `847edd2c8c4dcc47426fb76b7800b342dea3cde6`, for every file
 - **Licence:** Apache-2.0, Copyright 2012-2026 Anton Tananaev
 
 Note the JT808 decoder was formerly `HuabaoProtocolDecoder.java` and has been renamed. Older
@@ -39,10 +48,17 @@ references to "the Huabao decoder" mean this file.
 ## Refetch
 
 ```bash
-B=https://raw.githubusercontent.com/traccar/traccar/847edd2c8c4dcc47426fb76b7800b342dea3cde6/src/main/java/org/traccar/protocol
-for f in Gt06FrameDecoder Gt06Protocol Gt06ProtocolDecoder \
-         Jt808FrameDecoder Jt808Protocol Jt808ProtocolDecoder; do
-    curl -sL -o "reference/$f.java" "$B/$f.java"
+B=https://raw.githubusercontent.com/traccar/traccar/847edd2c8c4dcc47426fb76b7800b342dea3cde6/src
+for p in main/java/org/traccar/protocol/Gt06FrameDecoder main/java/org/traccar/protocol/Gt06Protocol \
+         main/java/org/traccar/protocol/Gt06ProtocolDecoder main/java/org/traccar/protocol/Jt808FrameDecoder \
+         main/java/org/traccar/protocol/Jt808Protocol main/java/org/traccar/protocol/Jt808ProtocolDecoder \
+         main/java/org/traccar/protocol/Jt600ProtocolDecoder \
+         main/java/org/traccar/helper/BcdUtil main/java/org/traccar/helper/BitUtil \
+         main/java/org/traccar/helper/Checksum \
+         test/java/org/traccar/protocol/Gt06ProtocolDecoderTest \
+         test/java/org/traccar/protocol/Jt808ProtocolDecoderTest \
+         test/java/org/traccar/protocol/Jt808FrameDecoderTest; do
+    curl -sSfL -o "reference/${p##*/}.java" "$B/$p.java"
 done
 ```
 
