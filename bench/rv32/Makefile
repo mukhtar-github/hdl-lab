@@ -10,7 +10,7 @@
 #
 # Homebrew's riscv64-elf-gcc is a FREESTANDING compiler: there is no
 # newlib, no crt0.o, no libc. That is fine and in fact preferable —
-# the core we are building will have no libc either, so a reference
+# the benchmark will run on our core with no libc either, so a reference
 # measured through newlib's printf would partly be measuring newlib.
 # Output goes through Spike's HTIF instead (htif.c).
 # ============================================================

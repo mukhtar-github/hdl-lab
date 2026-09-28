@@ -58,6 +58,7 @@ This layer becomes the design-rationale section of anything you eventually publi
 | `0006-reading-discipline.md` | Specs and implementations, not domain material |
 | `0007-variant-detection-strategy.md` | Stateless is the reference; cached is the instrument |
 | `0008-source-states-the-algorithm.md` | The reference runs the algorithm and the work its source states |
+| `0009-os-and-privileged-scope.md` | No OS under the benchmark; the core takes traps from Phase 2 |
 
 ## Layer 3 — `results/`
 

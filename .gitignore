@@ -33,3 +33,4 @@ bench/traces/
 # Apache-2.0, pinned by commit. Read-only, not part of the build.
 reference/*.java
 reference/*.pdf
+reference/riscv-tests/
