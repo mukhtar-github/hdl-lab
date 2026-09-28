@@ -59,6 +59,7 @@ This layer becomes the design-rationale section of anything you eventually publi
 | `0007-variant-detection-strategy.md` | Stateless is the reference; cached is the instrument |
 | `0008-source-states-the-algorithm.md` | The reference runs the algorithm and the work its source states |
 | `0009-os-and-privileged-scope.md` | No OS under the benchmark; the core takes traps from Phase 2 |
+| `0010-phase-0-closes-with-the-benchmark.md` | Phase 0 closes when the benchmark runs on Spike |
 
 ## Layer 3 — `results/`
 
@@ -131,9 +132,9 @@ directly comparable in the waveform.
 ```
 
 **Never fix an interesting bug before preserving its evidence.** Layer 5 above is where it
-goes. This habit is what makes the Phase 0 gate passable at all: finding a deliberately
-introduced bug from waveform evidence, with no print statements. Without the artifact, "I
-passed that gate" is a memory rather than a record.
+goes. This habit is what makes the Phase 0 gate's waveform criterion passable at all: finding a
+deliberately introduced bug from waveform evidence, with no print statements. Without the
+artifact, "I passed that gate" is a memory rather than a record.
 
 ---
 

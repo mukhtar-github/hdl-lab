@@ -46,6 +46,7 @@ Do not write the tutorial version. Write where to look.
 
 ## Why this is load-bearing
 
-The Phase 0 gate is *"find a bug you deliberately introduced by reading a waveform, without
-adding print statements."* This directory is the evidence that gate was actually passed, rather
-than remembered as passed.
+The Phase 0 gate's first criterion is *"find a bug you deliberately introduced by reading a
+waveform, without adding print statements."* (The second, since `decisions/0010`, is the
+benchmark.) This directory is the evidence that the first was actually met, rather than remembered
+as met.
