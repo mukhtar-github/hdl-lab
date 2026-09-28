@@ -8,80 +8,80 @@ stale. A new session checks it against the live state before acting on it.
 
 ---
 
-*Written by Claude at the end of the second session of 2026-09-27 (transcript `9a8face2`), after
-#16 merged.*
+*Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged.*
 
-## hdl-lab handoff (2026-09-27, evening)
+## hdl-lab handoff (2026-09-28)
 
-**State:** Phase 0. `main` was at `d6f73a0` when this was written. PRs #8–#16 are all merged. The
-local tag `sealed/0002-claude-prediction` exists and has not been pushed, as it should be.
+**State:** `main` was at `34e94c6` when this was written, and PRs #8–#19 are all merged. **Phase 0
+is open again**, for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag
+is `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is local only, as it
+must be.
 
-**Done this session**
-- **#15, `bench/PROTOCOL-EVIDENCE.md` Findings 4 to 7.** The numbers come from
-  `bench/evidence/checksums.py`, captured as `20260927T062216Z-protocol-checksums`.
-  - 4: neither Traccar decoder verifies a received checksum. The GT06 vendor document says to discard
-    on CRC error. So in this benchmark the CRC's per-byte cost is the cost of *conforming*, not of
-    what the de facto decoder does. Phase 4 must say which one it measured.
-  - 5: one of the vendor's three device-sent examples verifies as printed. The location example is
-    fixed by its own table (`0xCC` → `0xCF`). The heartbeat's length and CRC are for a frame
-    without Alarm/Language.
-  - 6: 27 of 185 GT06 and 11 of 114 JT808 Traccar test inputs fail their checksum. This is **not a
-    rate**.
-  - 7: the GT06 variant is chosen from the length field.
-  - `reference/` holds 13 Traccar files now, all from the same pinned commit, and the refetch recipe
-    is verified. The vendor PDF has its own recipe.
-- **#16, `bench/stimulus`, the stimulus generator.** Captured as
-  `20260927T065053Z-stimulus-coverage`: 23 tests pass, and `check.py` passes.
-  - It writes `stimulus.bin`, `intent.jsonl` and `manifest.json`. **`intent.jsonl` is the ground
-    truth, not the expected output**, which is the reference decoder's to produce.
-  - Nothing has a default. `params/coverage.json` is for tests only, and nothing may be quoted from
-    it. Rules R1–R17 are in its README.
-  - `SPEC.md` was amended with 5 unset parameters. The one that matters most is field-value
-    distributions: they set the JT808 escape density, 28 pairs in 8,327 frame bytes on the coverage
-    run.
+**If you are a second assistant reading this:** it replaces any other handoff. Where anything
+disagrees with `roadmap.md` or a decision record, those win. The roadmap is 559 lines, amended on
+2026-09-28 by `0009` and `0010`, so any earlier copy is out of date.
 
-**The reference, unchanged:** the stated table, 138,137 instret, image `1baf3e07…`. Per byte:
-bitwise 77, GCC's substituted table 51, stated table 10.
+### Phase gates, and where each stands
+
+| Phase | Gate (`roadmap.md`) | Stands |
+|---|---|---|
+| 0 | 1. Find a deliberately introduced bug by reading a waveform. 2. The benchmark runs on Spike, is checked against the generator's intent, is captured at every declared configuration, and is frozen and tagged (`0010`) | 1 passed 2026-09-21 (#1). **2 open.** It closes with the tag `v0.0-benchmark-frozen` |
+| 1 | The ALU passes randomised testing against a golden model | Passed 2026-09-21 (#2), tagged `v0.1-alu-golden-model-passing`. The register file and memories are still to build, with no gate of their own |
+| 2 | `rv32ui-p-*` passes through riscv-tests' standard environment, unmodified, which needs the trap minimum (`0009`) | Not started. **The core runs no program until Phase 0 closes** (`0010`) |
+| 3 | riscv-tests on the pipeline (plus `rv32um`, `rv32mi`), ACT4, lockstep against Spike, and an RTOS boots | Not started. The rest of the privileged scope must be fixed before pipeline design (`0009`'s open items) |
+| 4 | None written: profile on the core, plus a commodity-MCU baseline, judged against Predictions A–C | — |
+| 5 | Three numbers, honestly reported: speedup, area, Fmax, plus versus commodity | — |
+| 6, 7 | None written: FPGA, then the ASIC flow, open-ended | — |
+
+**Done on 2026-09-28**
+- **`0009` (#18), no OS under the benchmark.**
+  - The core's trap minimum moves into Phase 2: `Zicsr`; `mstatus`, `mtvec`, `mepc`, `mcause`,
+    `mhartid`, `mie`; `ecall` and illegal-instruction exceptions; `mret`; and `instret`. That lets
+    riscv-tests' standard environment run unmodified.
+  - The rest of the privileged scope is listed as open items, due before Phase 3's pipeline design.
+  - It was revised in review: two of its reasons had been overstated.
+- **`0010` (#19), Phase 0 closes when the benchmark runs on Spike.** Phase 2's core runs no program
+  before that.
+- **Tagged Phase 1's gate,** after re-running `make alu` and `make mutate-alu` at `5d664db`.
+- The rv32 README, `htif.h` and Makefile no longer say "the core will have no OS". The reference is
+  unchanged: 138,137 instret, image `1baf3e07…`.
 
 **Next, in order**
-1. **0002.** Unchanged. The author writes the hypothesis for B, C and D, and it is committed
-   verbatim. Then the seal is opened and verified, the sealed text is committed verbatim, and only
-   then are B, C and D captured. **No Zbkb/Zbc builds before the first step.**
-2. **Loose end.** Unchanged. 0001's status line still says "for the author to edit", but it was
-   merged unedited. Claude recommends a one-line note in the 0007 style. It is the author's call.
-3. **The reference decoder.** Decide these before writing any of it:
-   - What it does after a fault, and where it looks for the next frame. SPEC does not fix this, and
-     it decides what gets printed for every frame after a fault. Traccar's GT06 framer scans for
-     `0D 0A`. Its JT808 framer scans for `(`, `7E` or `E7`.
-   - The fields and units of its output records. SPEC §3 fixes their shape, not their contents.
-   - How `stimulus.bin` reaches the program under Spike: linked or loaded as binary, never compiled
-     in.
-   - Whether a GT06 length fault can reach variant dispatch (Finding 7).
-4. **Git identity.** git cannot derive an author from this Mac's hostname, now `Mac`. Commit with
-   `-c user.name="MacBook Pro" -c user.email="macbookpro@MacBooks-MacBook-Pro.local"` until the
-   author sets an identity with `git config --global`. Which one is the author's call.
-5. **QEMU is not planned.** Revisit it for gdb once the decoder exists. Prefer Sail as a second
-   opinion on the ISA.
+1. **The reference decoder:** Phase 0's critical path now. Decide these before writing any of it:
+   - what it does after a fault, and so where it looks for the next frame (SPEC does not fix this);
+   - its output fields and units;
+   - how `stimulus.bin` reaches it under Spike;
+   - whether a GT06 length fault can reach variant dispatch (PROTOCOL-EVIDENCE Finding 7).
+2. **`experiments/0002`.** Unchanged. The author's hypothesis for B, C and D goes in first, then the
+   seal is opened, then the captures. No Zbkb/Zbc builds before that.
+3. **0001's status line** still says "for the author to edit". A one-line note is recommended; it is
+   the author's call.
+4. **Before Phase 2's gate** (`0009`), decide two things, both tied to the memory-interface choice:
+   `fence_i` needs Zifencei and an instruction fetch that sees earlier stores; `ma_data` needs
+   misaligned loads and stores in hardware.
+5. **Git identity.** git cannot derive an author from the hostname `Mac`. Commit with
+   `-c user.name="MacBook Pro" -c user.email="macbookpro@MacBooks-MacBook-Pro.local"`, or the author
+   sets one.
+
+**Where things are**
+- **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0010`.
+- **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
+  whose `intent.jsonl` is the decoder's ground truth, not its expected output.
+- **What happened and what is unresolved:** `docs/journal/2026-09.md`, latest entries at the bottom.
 
 **Commands**
-- `make -C bench/rv32 check [VARS]` and `make -C bench/rv32 anatomy`
-- `make -C bench/stimulus` (generate and check), `make -C bench/stimulus test`, and
-  `make -C bench/stimulus PARAMS=<file> SEED=<n>`
+- `make -C bench/rv32 check`, `make -C bench/stimulus`, `make -C bench/stimulus test`
+- `make alu` and `make mutate-alu` (the Phase 1 gate)
 - `scripts/capture.sh <label> <command…>`, run from a clean tree
-- `python3 bench/evidence/checksums.py`
-- `spike -d …` or `spike -l --log-commits --log=f …`
 
 **Gotchas**
-- zsh does not word-split `$vars`, and it expands a word that starts with `=`, so `echo ======`
-  fails.
-- Paste only the `spike -d` line itself. Debugger commands pasted with it go to zsh. Spike's debugger
-  misreads piped input, so use `--debug-cmd=<file>`.
-- Install with Homebrew only with `HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1`,
+- **Push a tag by name, never with `--tags`.** That would publish the sealed 0002 prediction.
+- **A check that has never failed proves nothing.** Break it on purpose once.
+- **Homebrew:** install only with `HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1`,
   then re-check the reference image hash.
-- Start every topic from a freshly fetched `origin/main`. The author merges within minutes.
-- Traccar's test files in `reference/` are real-device hex (rule 2a). Count them. Never commit or
-  print their bytes.
-- A check that has never failed proves nothing. Break it on purpose once.
+- **zsh** does not word-split `$vars`, and it expands a word that starts with `=`.
+- **Branches:** start every topic from a freshly fetched `origin/main`. The author merges within
+  minutes.
 
 **Memory:** six notes load automatically in `~/hdl-lab`: the 0002 protocol, toolchain safety, the PR
 workflow, the author's profile, git identity, and this file's location.
