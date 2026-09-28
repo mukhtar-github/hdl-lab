@@ -231,3 +231,9 @@ Two facts found while laying out the frames bear on §4. They are recorded in
   doing what the de facto decoder does.
 - **Finding 7.** Traccar chooses the GT06 variant from the length field, so a length fault can
   change which decoder runs.
+
+# Amendment — 2026-09-28: §7's frame count, sized for RTL simulation too
+
+§7 says the frame count must be "small enough to run under Spike in reasonable time". `decisions/0010`,
+as amended, adds RTL simulation. The frozen configurations include one small enough to run on the
+core in RTL simulation in Phase 4, sized from a measured throughput.

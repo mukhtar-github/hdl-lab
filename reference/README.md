@@ -122,6 +122,7 @@ environment to run unmodified. Its line citations are to these files.
 | File | Why it is here |
 |---|---|
 | `env/p/riscv_test.h` | The standard environment that starts and ends every `-p-` test: the CSRs, exceptions and `mret` it needs |
+| `env/p/link.ld` | The environment's linker script: code at `0x80000000`, and `tohost` on the next page |
 | `isa/rv32ui/Makefrag`, `isa/rv32mi/Makefrag` | Which tests make up each group |
 | `isa/rv64ui/ma_data.S`, `isa/rv64ui/fence_i.S` | The two `rv32ui` tests that reach beyond RV32I. The `rv32ui` versions include these. |
 | `isa/rv64mi/illegal.S`, `isa/rv64si/csr.S` | What `rv32mi` expects of the illegal-instruction trap. `rv32mi`'s `csr` test is `rv64si/csr.S` built for machine mode. |
@@ -133,6 +134,7 @@ mkdir -p reference/riscv-tests/env/p reference/riscv-tests/isa/rv32ui \
          reference/riscv-tests/isa/rv32mi reference/riscv-tests/isa/rv64ui \
          reference/riscv-tests/isa/rv64mi reference/riscv-tests/isa/rv64si
 curl -sSfL -o reference/riscv-tests/env/p/riscv_test.h "$E/p/riscv_test.h"
+curl -sSfL -o reference/riscv-tests/env/p/link.ld "$E/p/link.ld"
 for p in isa/rv32ui/Makefrag isa/rv32mi/Makefrag isa/rv64ui/ma_data.S isa/rv64ui/fence_i.S \
          isa/rv64mi/illegal.S isa/rv64si/csr.S; do
     curl -sSfL -o "reference/riscv-tests/$p" "$T/$p"
@@ -140,3 +142,29 @@ done
 ```
 
 Not committed, like the rest of `reference/`. The directory is gitignored.
+
+## Spike's source — the model the core is held to
+
+Read for `decisions/0009`'s amendment, which takes the exact CSR access rules from the simulator the
+core will run in lockstep with (rung 4), until the Privileged Architecture itself is pinned.
+
+- **Source:** https://github.com/riscv-software-src/riscv-isa-sim at tag `v1.1.0`, commit
+  `530af85d83781a3dae31a4ace84a573ec255fefa`, the build `bench/rv32/README.md` pins
+- **Fetched:** 2026-09-28
+- **Licence:** BSD-3-Clause, Copyright The Regents of the University of California
+
+| File | Why it is here |
+|---|---|
+| `riscv/csrs.cc` | A CSR is read-only by its address (bits 11:10 = `11`), and only a write to one traps |
+| `riscv/processor.cc` | A missing CSR traps on any access; which CSRs exist, including the four ID registers |
+| `riscv/insns/csrrs.h`, `csrrsi.h`, `csrrw.h` | What counts as a write: `csrrs` and `csrrsi` only when `rs1` is non-zero, `csrrw` always |
+
+```bash
+B=https://raw.githubusercontent.com/riscv-software-src/riscv-isa-sim/530af85d83781a3dae31a4ace84a573ec255fefa
+mkdir -p reference/spike/riscv/insns
+for p in riscv/csrs.cc riscv/processor.cc riscv/insns/csrrs.h riscv/insns/csrrsi.h riscv/insns/csrrw.h; do
+    curl -sSfL -o "reference/spike/$p" "$B/$p"
+done
+```
+
+Not committed. The directory is gitignored.

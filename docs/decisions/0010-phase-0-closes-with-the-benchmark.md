@@ -1,7 +1,8 @@
 # 0010 — Phase 0 closes when the benchmark runs on Spike
 
 - **Date:** 2026-09-28
-- **Status:** Accepted. Phase 0 is open again until its second criterion passes.
+- **Status:** Accepted, **amended 2026-09-28** — see *Amendment* at the end. Phase 0 is open
+  again until its second criterion passes.
 - **Phase:** 0 (policy), binding until Phase 2 starts
 
 ## Context
@@ -104,3 +105,18 @@ now checked.
 
 None. This record fixes what a gate checks. It does not rest on a belief that a later measurement
 could test.
+
+# Amendment — 2026-09-28
+
+Two notes from the review that amended `0009`. The decision is unchanged.
+
+1. **Size the frozen configurations for RTL simulation, not only for Spike.** Phase 4 re-runs the
+   frozen configurations on the core, in RTL simulation (`0002`: Icarus simulates). That is far
+   slower than Spike, by an amount not yet measured. SPEC §7 sizes the frame count for Spike alone.
+   So the declared configurations must include one small enough to run in RTL simulation in
+   reasonable time, and its size must come from a measured throughput, not a guess. One way to
+   measure: an open-source RV32 core running the `bench/rv32` harness under Icarus, before the
+   project's own core exists. The full configuration is declared beside it.
+2. **Tag order is not version order.** `v0.1-alu-golden-model-passing` was tagged first, and
+   `v0.0-benchmark-frozen` will land on a later commit. Anything that sorts tags by version puts
+   them out of time order.
