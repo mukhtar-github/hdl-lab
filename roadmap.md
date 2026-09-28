@@ -66,8 +66,9 @@ architectural choices that are painful to reverse:
   squash-and-redirect logic. A trap also squashes the instruction that raised it, and an older trap
   must win over a younger branch's redirect. So where traps are taken belongs to the same design as
   where branches resolve, and that also sets the misprediction cost Prediction A is about. Fix the
-  privileged scope, and record where branches resolve and why, before designing the pipeline
-  (`decisions/0009`, amended 2026-09-28).
+  privileged scope, and record where branches resolve and why, before designing the pipeline. The
+  reasons must be timing, area and hazards, never Prediction A, whose outcome that choice would
+  otherwise settle unnoticed (`decisions/0009`, amended 2026-09-28).
 
 Committing to a *mechanism* in week one is where it goes wrong. "I'm building a systolic array"
 decided before you can measure anything turns Phase 4 into theatre: you will find the evidence

@@ -1,8 +1,8 @@
 # 0010 — Phase 0 closes when the benchmark runs on Spike
 
 - **Date:** 2026-09-28
-- **Status:** Accepted, **amended 2026-09-28** — see *Amendment* at the end. Phase 0 is open
-  again until its second criterion passes.
+- **Status:** Accepted, **amended twice on 2026-09-28**; see the amendments at the end. Phase 0 is
+  open again until its second criterion passes.
 - **Phase:** 0 (policy), binding until Phase 2 starts
 
 ## Context
@@ -106,7 +106,7 @@ now checked.
 None. This record fixes what a gate checks. It does not rest on a belief that a later measurement
 could test.
 
-# Amendment — 2026-09-28
+# Amendment 1 — 2026-09-28
 
 Two notes from the review that amended `0009`. The decision is unchanged.
 
@@ -120,3 +120,18 @@ Two notes from the review that amended `0009`. The decision is unchanged.
 2. **Tag order is not version order.** `v0.1-alu-golden-model-passing` was tagged first, and
    `v0.0-benchmark-frozen` will land on a later commit. Anything that sorts tags by version puts
    them out of time order.
+
+# Amendment 2 — 2026-09-28
+
+This corrects Amendment 1's measurement. **Measure simulated cycles per second, not instructions
+per second.**
+
+A proxy core's instructions per second depend on its cycles per instruction. A bit-serial core
+spends dozens of cycles on each instruction, and a multi-cycle core several. Either would misstate a
+pipelined core's throughput by an order of magnitude or more. So:
+
+1. Measure simulated cycles per second on a proxy of roughly the planned core's size.
+2. Convert to instructions using the planned core's expected cycles per instruction, stated as an
+   assumption.
+3. Re-measure on the project's own core before Phase 4 starts, and re-size the small configuration
+   if the two disagree.

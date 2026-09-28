@@ -1,9 +1,19 @@
 # 0009 — No OS under the benchmark; the core takes traps from Phase 2
 
 - **Date:** 2026-09-28
-- **Status:** Accepted, **amended 2026-09-28** — see *Amendment* at the end. Decision 3 is open on
-  purpose, with a deadline: before Phase 3's pipeline design starts. One of its items, pinning the
-  Privileged Architecture, is now due before Phase 2.
+- **Status:** Accepted, **amended twice on 2026-09-28**; see the amendments at the end. **Where
+  they disagree with the body, the amendments win.** The body is left as merged, so these passages
+  in it are superseded:
+  - Decision 1's "interrupt": it is now any trap (Amendment 1, point 4).
+  - Decision 2's list: the minimum is now a rule (Amendment 2, point 2). Amendment 1's list stands
+    until the specification is pinned.
+  - Decision 3's "both flush the younger instructions" (Amendment 1, point 6).
+  - *Consequences*: "the benchmark can run unmodified on the Phase 2 core" (Amendment 1, point 1),
+    and "six CSRs" (Amendment 1, point 5).
+  - The open-items rows for the ID registers and for pinning the Privileged Architecture. Both are
+    due in Phase 2 now (Amendment 1, points 2 and 5).
+
+  Decision 3 is open on purpose, with a deadline: before Phase 3's pipeline design starts.
 - **Phase:** 0 (policy), binding on Phases 2 and 3
 
 ## Context
@@ -195,7 +205,7 @@ CSRs or its trap causes.** What changes is where in the pipeline a trap is taken
 designs in any case. If Phase 3 rewrites the CSR file or the trap-entry sequence, building them
 early bought less than this record assumes.
 
-# Amendment — 2026-09-28: the record as merged, reviewed
+# Amendment 1 — 2026-09-28: the record as merged, reviewed
 
 A review of this record as merged raised seven points about it. Each was checked before it went in,
 against the reference build, riscv-tests' `p/link.ld`, and Spike 1.1.0's own source at `530af85`.
@@ -293,3 +303,60 @@ the core's memory map puts memory at `0x80000000`, as the benchmark already assu
 
 `roadmap.md` is amended to match: the Phase 2 paragraph, the trap-and-CSR bullet among the early
 choices, and rung 2's heading, which still read "*(Phase 2)*" over all three test groups.
+
+# Amendment 2 — 2026-09-28: a second review
+
+A second review of the amended record raised six points. Each was checked against Spike's pinned
+source, and the first also against a live run. All six hold. None changes a decision. Two of them
+are recorded elsewhere: the superseded passages are listed in the status block, and a stale
+freshness marker was fixed in `docs/HANDOFF.md`.
+
+## 1. Lockstep needs its differences declared before bring-up
+
+Amendment 1 held the core to Spike. But even a correct core will differ from Spike in at least
+three places:
+
+- **The ID registers' values.** Spike's `marchid` is 5, its own registered architecture ID
+  (`riscv/processor.cc:545`). A core that returns zero will mismatch on every read of it.
+- **`misa`.** Spike builds it from its `--isa` argument (`processor.cc:366`), so Spike must be
+  launched with an ISA and a privilege configuration that match the core.
+- **Spike's boot ROM.** Spike runs five instructions at `0x1000` to `0x1010` before it jumps to
+  `0x80000000`. Its own log of the reference image shows them. The core starts at `0x80000000`.
+
+So rung 4 needs two things before its bring-up: Spike's launch configuration, and a list of
+expected divergences. This joins the open items. It is due before lockstep co-simulation starts, in
+Phase 3.
+
+## 2. The counters, and a rule for the minimum
+
+`instret` is `0xC02`, a read-only view of `minstret` at `0xB02` (`processor.cc:376`). On RV32 their
+upper halves are `0xC82` and `0xB82`. Two rules decide what the core must return, and lockstep
+compares every read, so both must be exact:
+
+- **A read returns the count from before the reading instruction retires.** Spike increments
+  `minstret` only after each instruction has executed (`riscv/execute.cc:351`), and a read returns
+  the stored value (`csrs.cc:842-844`). So `rdinstret` does not count itself. The benchmark's
+  difference of two reads would cancel an off-by-one here. Lockstep would not.
+- **A write takes precedence over the writing instruction's own increment.** In Spike's words, "The
+  ISA mandates that if an instruction writes instret, the write takes precedence over the increment
+  to instret" (`csrs.cc:855-858`).
+
+Whether `minstret` comes with `instret` in Phase 2 is one case of a general question. Amendment 1
+answered it one register at a time. It is answered now by a rule. **The Phase 2 minimum is:**
+
+- what the standard environment needs;
+- what the harness reads;
+- every register that the pinned Privileged Architecture makes mandatory for a machine-mode-only
+  RV32 hart.
+
+Amendment 1's list stands until the pin, due before Phase 2, settles the third part. The counters
+are its first case: `minstret`, its upper halves, and `mcycle`. Until then, both rules above come
+from Spike, and the pinned specification is to confirm them.
+
+## 3. Where branches resolve, decided on engineering grounds only
+
+Amendment 1 made the stage where branches resolve an open item, because it sets Prediction A's
+cost. **Its reasons are to be timing, area and hazards. Prediction A must not be one of them.** The
+record exists so that the stage is chosen without regard to which prediction it favours. Its effect
+on A is to be measured in Phase 4, not chosen in Phase 3. `roadmap.md`'s trap-and-CSR bullet gains
+the same clause.
