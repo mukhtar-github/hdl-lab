@@ -27,6 +27,12 @@ Added 2026-09-27, from the same commit:
 | `BcdUtil.java`, `BitUtil.java`, `Checksum.java` | Helpers the decoders call. Read for exact semantics: an odd BCD digit count peeks at the next byte without consuming it, and `CRC16_X25` is CRC-16/X-25. |
 | `Gt06ProtocolDecoderTest.java`, `Jt808ProtocolDecoderTest.java`, `Jt808FrameDecoderTest.java` | Traccar's unit tests. **Their frames are real-device and forum hex** (`bench/README` rule 2a), so they are only counted, locally, by `bench/evidence/checksums.py`. None of their bytes is committed. |
 
+Added 2026-09-28, from the same commit:
+
+| File | Why it is here |
+|---|---|
+| `Gt06FrameDecoderTest.java` | Traccar's GT06 framer test. With `Jt808FrameDecoderTest.java`, it anchors the port of both framers in `bench/evidence/framing.py` (`PROTOCOL-EVIDENCE` Finding 8). Real-device hex again, so it is only used locally and none of its bytes is committed. |
+
 **Read the size ratio carefully.** ~30-40x more code in field handling than framing tells you
 where the *variant complexity* lives. It says nothing about where the *cycles* go — a 77 KB
 decoder may execute one narrow path per frame while a 2 KB frame decoder runs over every byte.
@@ -38,7 +44,7 @@ Do not let a source-size observation quietly become evidence for a cycle-count c
 - **Source:** https://github.com/traccar/traccar
 - **Path:** `src/main/java/org/traccar/protocol/`, and since 2026-09-27 also
   `src/main/java/org/traccar/helper/` and `src/test/java/org/traccar/protocol/`
-- **Fetched:** 2026-09-17; the files added above on 2026-09-27
+- **Fetched:** 2026-09-17; the files added above on 2026-09-27 and 2026-09-28
 - **Pinned commit:** `847edd2c8c4dcc47426fb76b7800b342dea3cde6`, for every file
 - **Licence:** Apache-2.0, Copyright 2012-2026 Anton Tananaev
 
@@ -57,7 +63,8 @@ for p in main/java/org/traccar/protocol/Gt06FrameDecoder main/java/org/traccar/p
          main/java/org/traccar/helper/Checksum \
          test/java/org/traccar/protocol/Gt06ProtocolDecoderTest \
          test/java/org/traccar/protocol/Jt808ProtocolDecoderTest \
-         test/java/org/traccar/protocol/Jt808FrameDecoderTest; do
+         test/java/org/traccar/protocol/Jt808FrameDecoderTest \
+         test/java/org/traccar/protocol/Gt06FrameDecoderTest; do
     curl -sSfL -o "reference/${p##*/}.java" "$B/$p.java"
 done
 ```
