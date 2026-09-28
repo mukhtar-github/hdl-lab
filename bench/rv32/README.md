@@ -16,7 +16,7 @@ Compiling works; linking against a C library does not, because there is no C lib
 That constraint turned out to be the right target anyway:
 
 ```
-the core we are building will have no OS and no libc
+the benchmark will run on our core with no OS and no libc
         ↓
 a reference measured through newlib's printf
         ↓

@@ -2,9 +2,9 @@
 // riscv64-elf-gcc ships a freestanding compiler with no newlib — so output and
 // exit go straight through Spike's host-target interface.
 //
-// That is not a workaround, it is the right target for this project: the core
-// we are building will have no OS and no libc either, so a reference result
-// measured through newlib's printf would be measuring newlib.
+// That is not a workaround, it is the right target for this project: the
+// benchmark will run on our core with no OS and no libc either, so a reference
+// result measured through newlib's printf would be measuring newlib.
 #ifndef HTIF_H
 #define HTIF_H
 #include <stdint.h>

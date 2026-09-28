@@ -62,6 +62,10 @@ architectural choices that are painful to reverse:
 - **Datapath width and load/store granularity.** Data-hungry targets shape Phase 2, not Phase 5.
 - **Area budget.** If Tiny Tapeout is on the table, that constrains every module from the first
   one.
+- **The trap and CSR path.** A precise trap and a mispredicted branch flush the same younger
+  instructions, so where traps are taken is part of the same pipeline design as where branches
+  resolve. Fix the privileged scope before designing the pipeline (`decisions/0009`, added
+  2026-09-28).
 
 Committing to a *mechanism* in week one is where it goes wrong. "I'm building a systolic array"
 decided before you can measure anything turns Phase 4 into theatre: you will find the evidence
@@ -194,6 +198,13 @@ you find out whether you built a CPU or something that runs the programs you hap
 
 See **The conformance track** below — rungs 1 and 2 belong here.
 
+**Also in Phase 2: the trap minimum** (`decisions/0009`). The gate runs `rv32ui-p-*` through
+riscv-tests' standard environment, unmodified. To start each test and report its result, that
+environment needs a little of the privileged architecture: `Zicsr`, six machine-mode CSRs, the
+environment-call exception and `mret`. Conformance adds the illegal-instruction exception, and the
+benchmark adds the one counter it reads, `instret`. Precise traps in the pipeline are still Phase
+3's to design. What this buys is a trap implementation known to work before pipelining starts.
+
 ---
 
 ### Phase 3 — Pipeline, M extension, traps *(weeks 16–24)*
@@ -201,7 +212,9 @@ See **The conformance track** below — rungs 1 and 2 belong here.
 Five stages: fetch, decode, execute, memory, writeback. Then the parts that make it real:
 hazard detection, forwarding paths, load-use stalls, branch resolution and flush.
 
-Add `M` (multiply/divide), `Zicsr`, and machine-mode trap handling.
+Add `M` (multiply/divide), and the rest of machine-mode trap handling: interrupts, the timer an
+RTOS needs, and the other open items in `decisions/0009`. They must be fixed before pipeline design
+starts. `Zicsr` and the trap minimum arrive in Phase 2.
 
 This phase contains most of the actual computer architecture in the project. Phases 0–2 teach
 you to describe hardware; this one teaches you why processors are shaped the way they are.
@@ -297,6 +310,10 @@ space is small enough to afford it.
 (`rv32ui-p-*`, `rv32um-p-*`, `rv32mi-p-*`). Bring-up needs a linker script, a `tohost`
 termination mechanism, and an ELF loader in your testbench. Cheapest real external check
 available; do it as early as it will run.
+
+*Amended by `decisions/0009`:* `rv32ui-p-*` is the Phase 2 gate, and the standard environment it runs
+in needs the trap minimum. `rv32um-p-*` runs once `M` lands, and `rv32mi-p-*`, which tests the
+privileged architecture itself, once the rest of that architecture does. Both land in Phase 3.
 
 **3. Architectural Certification Tests (ACT4)** *(Phase 3)* — the official suite. **Note the
 tooling changed:** RISCOF is deprecated and replaced by the ACT4 Framework, a Makefile-and-Python

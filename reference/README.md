@@ -106,3 +106,37 @@ provenance decision, not a default — and nothing here is needed to build or ru
 project. A pinned URL reproduces it exactly. If that changes (offline work, or the benchmark
 starts citing specific decoder behaviour), vendor it deliberately with the licence retained and
 say so in a decision record.
+
+## riscv-tests — the Phase 2 gate's own harness
+
+Read for `decisions/0009`, which decides what the core must implement for riscv-tests' standard
+environment to run unmodified. Its line citations are to these files.
+
+- **Source:** https://github.com/riscv-software-src/riscv-tests at
+  `bcffa2b3188b040c611f90dc0b6e422f54775a09`. Its `env` submodule is
+  https://github.com/riscv/riscv-test-env, pinned by that commit at
+  `6de71edb142be36319e380ce782c3d1830c65d68`, which is not that repository's latest.
+- **Fetched:** 2026-09-28
+- **Licence:** BSD-style, Copyright 2012-2015 The Regents of the University of California
+
+| File | Why it is here |
+|---|---|
+| `env/p/riscv_test.h` | The standard environment that starts and ends every `-p-` test: the CSRs, exceptions and `mret` it needs |
+| `isa/rv32ui/Makefrag`, `isa/rv32mi/Makefrag` | Which tests make up each group |
+| `isa/rv64ui/ma_data.S`, `isa/rv64ui/fence_i.S` | The two `rv32ui` tests that reach beyond RV32I. The `rv32ui` versions include these. |
+| `isa/rv64mi/illegal.S`, `isa/rv64si/csr.S` | What `rv32mi` expects of the illegal-instruction trap. `rv32mi`'s `csr` test is `rv64si/csr.S` built for machine mode. |
+
+```bash
+T=https://raw.githubusercontent.com/riscv-software-src/riscv-tests/bcffa2b3188b040c611f90dc0b6e422f54775a09
+E=https://raw.githubusercontent.com/riscv/riscv-test-env/6de71edb142be36319e380ce782c3d1830c65d68
+mkdir -p reference/riscv-tests/env/p reference/riscv-tests/isa/rv32ui \
+         reference/riscv-tests/isa/rv32mi reference/riscv-tests/isa/rv64ui \
+         reference/riscv-tests/isa/rv64mi reference/riscv-tests/isa/rv64si
+curl -sSfL -o reference/riscv-tests/env/p/riscv_test.h "$E/p/riscv_test.h"
+for p in isa/rv32ui/Makefrag isa/rv32mi/Makefrag isa/rv64ui/ma_data.S isa/rv64ui/fence_i.S \
+         isa/rv64mi/illegal.S isa/rv64si/csr.S; do
+    curl -sSfL -o "reference/riscv-tests/$p" "$T/$p"
+done
+```
+
+Not committed, like the rest of `reference/`. The directory is gitignored.
