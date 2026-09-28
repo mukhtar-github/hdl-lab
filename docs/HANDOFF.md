@@ -8,7 +8,8 @@ stale. A new session checks it against the live state before acting on it.
 
 ---
 
-*Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged.*
+*Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
+for the amendments to `0009` and `0010`.*
 
 ## hdl-lab handoff (2026-09-28)
 
@@ -27,7 +28,7 @@ disagrees with `roadmap.md` or a decision record, those win. The roadmap is 559 
 |---|---|---|
 | 0 | 1. Find a deliberately introduced bug by reading a waveform. 2. The benchmark runs on Spike, is checked against the generator's intent, is captured at every declared configuration, and is frozen and tagged (`0010`) | 1 passed 2026-09-21 (#1). **2 open.** It closes with the tag `v0.0-benchmark-frozen` |
 | 1 | The ALU passes randomised testing against a golden model | Passed 2026-09-21 (#2), tagged `v0.1-alu-golden-model-passing`. The register file and memories are still to build, with no gate of their own |
-| 2 | `rv32ui-p-*` passes through riscv-tests' standard environment, unmodified, which needs the trap minimum (`0009`) | Not started. **The core runs no program until Phase 0 closes** (`0010`) |
+| 2 | `rv32ui-p-*` passes through riscv-tests' standard environment, unmodified: its `riscv_test.h` and `link.ld`, so memory sits at `0x80000000`. That needs the trap minimum (`0009`, amended) | Not started. **The core runs no program until Phase 0 closes** (`0010`). The Privileged Architecture is pinned before any trap work |
 | 3 | riscv-tests on the pipeline (plus `rv32um`, `rv32mi`), ACT4, lockstep against Spike, and an RTOS boots | Not started. The rest of the privileged scope must be fixed before pipeline design (`0009`'s open items) |
 | 4 | None written: profile on the core, plus a commodity-MCU baseline, judged against Predictions A–C | — |
 | 5 | Three numbers, honestly reported: speedup, area, Fmax, plus versus commodity | — |
@@ -36,12 +37,18 @@ disagrees with `roadmap.md` or a decision record, those win. The roadmap is 559 
 **Done on 2026-09-28**
 - **`0009` (#18), no OS under the benchmark.**
   - The core's trap minimum moves into Phase 2: `Zicsr`; `mstatus`, `mtvec`, `mepc`, `mcause`,
-    `mhartid`, `mie`; `ecall` and illegal-instruction exceptions; `mret`; and `instret`. That lets
-    riscv-tests' standard environment run unmodified.
+    `mhartid`, `mie`, `misa`, `mvendorid`, `marchid`, `mimpid`; `ecall` and illegal-instruction
+    exceptions; `mret`; and `instret`. That lets riscv-tests' standard environment run unmodified.
   - The rest of the privileged scope is listed as open items, due before Phase 3's pipeline design.
-  - It was revised in review: two of its reasons had been overstated.
+  - Revised in review before merge, then **amended after it**, from pinned sources:
+    - the Privileged Architecture is pinned before Phase 2;
+    - "read-only" and "write" follow Spike's exact rules (so `rdinstret` never traps);
+    - no measured window may include an undeclared trap of any kind;
+    - the benchmark's decoder will need `M`, so it first runs on the core in Phase 3;
+    - where branches resolve is recorded before pipeline design, because it sets Prediction A's cost.
 - **`0010` (#19), Phase 0 closes when the benchmark runs on Spike.** Phase 2's core runs no program
-  before that.
+  before that. Amended: the frozen configurations include one sized, from a measured throughput,
+  for RTL simulation in Phase 4.
 - **Tagged Phase 1's gate,** after re-running `make alu` and `make mutate-alu` at `5d664db`.
 - The rv32 README, `htif.h` and Makefile no longer say "the core will have no OS". The reference is
   unchanged: 138,137 instret, image `1baf3e07…`.
@@ -52,11 +59,15 @@ disagrees with `roadmap.md` or a decision record, those win. The roadmap is 559 
    - its output fields and units;
    - how `stimulus.bin` reaches it under Spike;
    - whether a GT06 length fault can reach variant dispatch (PROTOCOL-EVIDENCE Finding 7).
+
+   Before freezing, measure RTL-simulation throughput, for example an open-source RV32 core running
+   the `bench/rv32` harness under Icarus, and size a small configuration from it (`0010`, amended).
 2. **`experiments/0002`.** Unchanged. The author's hypothesis for B, C and D goes in first, then the
    seal is opened, then the captures. No Zbkb/Zbc builds before that.
 3. **0001's status line** still says "for the author to edit". A one-line note is recommended; it is
    the author's call.
-4. **Before Phase 2's gate** (`0009`), decide two things, both tied to the memory-interface choice:
+4. **Before any Phase 2 trap work,** pin the Privileged Architecture in `reference/` (`0009`,
+   amended). **Before Phase 2's gate,** decide two things, both tied to the memory-interface choice:
    `fence_i` needs Zifencei and an instruction fetch that sees earlier stores; `ma_data` needs
    misaligned loads and stores in hardware.
 5. **Git identity.** git cannot derive an author from the hostname `Mac`. Commit with

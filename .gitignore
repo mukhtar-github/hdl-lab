@@ -34,3 +34,4 @@ bench/traces/
 reference/*.java
 reference/*.pdf
 reference/riscv-tests/
+reference/spike/

@@ -1,8 +1,9 @@
 # 0009 — No OS under the benchmark; the core takes traps from Phase 2
 
 - **Date:** 2026-09-28
-- **Status:** Accepted. Decision 3 is open on purpose, with a deadline: before Phase 3's pipeline
-  design starts.
+- **Status:** Accepted, **amended 2026-09-28** — see *Amendment* at the end. Decision 3 is open on
+  purpose, with a deadline: before Phase 3's pipeline design starts. One of its items, pinning the
+  Privileged Architecture, is now due before Phase 2.
 - **Phase:** 0 (policy), binding on Phases 2 and 3
 
 ## Context
@@ -193,3 +194,102 @@ other test does.
 CSRs or its trap causes.** What changes is where in the pipeline a trap is taken, which Phase 3
 designs in any case. If Phase 3 rewrites the CSR file or the trap-entry sequence, building them
 early bought less than this record assumes.
+
+# Amendment — 2026-09-28: the record as merged, reviewed
+
+A review of this record as merged raised seven points about it. Each was checked before it went in,
+against the reference build, riscv-tests' `p/link.ld`, and Spike 1.1.0's own source at `530af85`.
+Spike is the model the core will be held to in lockstep (rung 4). **The four decisions stand.**
+Their details were wrong or incomplete in the ways below.
+
+## 1. The benchmark does not run on the Phase 2 core. The harness does.
+
+*Consequences* said that "the benchmark can run unmodified on the Phase 2 core". That holds only for
+an image with no `M` instruction, and `M` arrives in Phase 3.
+
+- **Today's harness has none.** Built for `rv32i`, its image is byte-identical to the reference, and
+  Spike runs it as an RV32I hart with the same count and an oracle pass
+  ([`20260928T041029Z-spike-crc-table-rv32i-O2`](../results/20260928T041029Z-spike-crc-table-rv32i-O2/)).
+  So it can run on the Phase 2 core.
+- **The reference decoder very likely will not.** It unpacks BCD timestamps and fixed-point
+  coordinates, and for `rv32im` GCC compiles division, and much multiplication, to `M` instructions.
+- **So `0004`'s "same program, unmodified" is first honoured for the benchmark when `M` lands, in
+  Phase 3.** `M` stays where the roadmap puts it. The gap is not bridged by a trap handler that
+  emulates `M` in software: point 4 forbids an undeclared trap in a measured window.
+
+## 2. The Privileged Architecture is pinned before Phase 2
+
+Decision 2 implements privileged behaviour in Phase 2, and `0006` requires a specification to be
+pinned before it is implemented. So this open item's deadline moves: the version is pinned in
+`reference/` before Phase 2's trap minimum is written. The rules in point 3 are to be checked
+against it then. Until that point, their source is Spike.
+
+## 3. What "read-only" and "write" mean
+
+Decision 2 raises the illegal-instruction exception "for a write to a read-only CSR". Both words
+have exact definitions, and two cases in this record sit right on the line. Spike 1.1.0 implements
+them as follows.
+
+- **Read-only is a property of the address:** bits 11:10 are `11` (`riscv/csrs.cc:25`). A register
+  whose bits are all hardwired is not read-only. `mie` may be all zeros, but its address is
+  read/write, so writes to it are accepted and ignored. Trapping them would recreate the `mie` loop
+  found above.
+- **A write is a property of the encoding.** `csrrs` and `csrrc` with `rs1 = x0` do not write, and
+  nor do their immediate forms with zero (`riscv/insns/csrrs.h:1`, `csrrsi.h:1`). `csrrw` always
+  writes (`csrrw.h:1`). Only a write to a read-only address traps (`riscv/csrs.cc:38-39`).
+- **So `rdinstret` never traps.** It is `csrrs rd, instret, x0` on a read-only address, which makes
+  it a read. The benchmark's own measurement depends on this rule being implemented exactly.
+- **A CSR that does not exist traps on any access** (`riscv/processor.cc:1014-1016`).
+
+## 4. Decision 1 covers every trap
+
+Decision 1 said that no measured window may include an undeclared *interrupt*. But a trap
+handler's instructions count in `instret` whatever raised the trap. **It now reads: no measured
+window may include a trap, exception or interrupt, that the configuration does not declare.** That
+covers what this record leaves open: a software fix-up for misaligned accesses, and software
+emulation of `M`.
+
+## 5. The illegal-instruction trap, for one consistent reason
+
+The record justified the trap by conformance. It cited a Phase 3 test for that, `rv32mi`'s
+`illegal`, which also reads `mtval`. And it left out registers that conformance requires. Applied
+consistently:
+
+- **`misa`, `mvendorid`, `marchid` and `mimpid` join the Phase 2 minimum.** They must be readable,
+  and may read as zero; confirm both in the version pinned under point 2. Spike implements all four
+  (`riscv/processor.cc:366`, `545-547`). A core that traps on reading them would diverge from the
+  model it will be held to. Under Decision 2 as first written, reading them would have trapped.
+- **The trap also costs almost nothing** once `ecall`'s trap path exists. Passing the gate by
+  silently ignoring unimplemented instructions would be behaviour to reverse later.
+- **`rv32mi`'s `illegal` test is where Phase 3 checks it,** together with `mtval`.
+
+## 6. What a trap and a branch actually share
+
+Decision 3 said that "a precise trap and a mispredicted branch both flush the younger instructions".
+But a trap also squashes the instruction that raised it. What the two share is the pipeline's
+squash-and-redirect logic, with a priority rule: an older trap must override a younger branch's
+redirect. That coupling is why Decision 3's deadline stands.
+
+Separately, **where branches resolve sets the misprediction cost that Prediction A is about.** That
+choice joins the open items. Its reasons are to be recorded before pipeline design, so that Phase 3
+does not settle Prediction A without anyone noticing.
+
+## 7. What "unmodified" covers
+
+riscv-tests' environment is `p/riscv_test.h` together with `p/link.ld`. The linker script places
+code at `0x80000000`, and `tohost` on the next 4 KiB page. **"Unmodified" covers both files.** So
+the core's memory map puts memory at `0x80000000`, as the benchmark already assumes
+(`bench/rv32/link.ld:7`), and the testbench ends a test on the write to `tohost`.
+
+## The Phase 2 minimum, as amended
+
+- `Zicsr`: the six CSR instructions, with point 3's rules;
+- the CSRs `mstatus`, `mtvec`, `mepc`, `mcause`, `mhartid` and `mie`, and `misa`, `mvendorid`,
+  `marchid` and `mimpid`;
+- the environment-call and illegal-instruction exceptions;
+- `mret`;
+- the `instret` counter;
+- all of it written against the Privileged Architecture pinned before Phase 2 starts.
+
+`roadmap.md` is amended to match: the Phase 2 paragraph, the trap-and-CSR bullet among the early
+choices, and rung 2's heading, which still read "*(Phase 2)*" over all three test groups.

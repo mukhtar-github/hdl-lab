@@ -62,10 +62,12 @@ architectural choices that are painful to reverse:
 - **Datapath width and load/store granularity.** Data-hungry targets shape Phase 2, not Phase 5.
 - **Area budget.** If Tiny Tapeout is on the table, that constrains every module from the first
   one.
-- **The trap and CSR path.** A precise trap and a mispredicted branch flush the same younger
-  instructions, so where traps are taken is part of the same pipeline design as where branches
-  resolve. Fix the privileged scope before designing the pipeline (`decisions/0009`, added
-  2026-09-28).
+- **The trap and CSR path.** A trap and a mispredicted branch share the pipeline's
+  squash-and-redirect logic. A trap also squashes the instruction that raised it, and an older trap
+  must win over a younger branch's redirect. So where traps are taken belongs to the same design as
+  where branches resolve, and that also sets the misprediction cost Prediction A is about. Fix the
+  privileged scope, and record where branches resolve and why, before designing the pipeline
+  (`decisions/0009`, amended 2026-09-28).
 
 Committing to a *mechanism* in week one is where it goes wrong. "I'm building a systolic array"
 decided before you can measure anything turns Phase 4 into theatre: you will find the evidence
@@ -205,12 +207,15 @@ you find out whether you built a CPU or something that runs the programs you hap
 
 See **The conformance track** below — rungs 1 and 2 belong here.
 
-**Also in Phase 2: the trap minimum** (`decisions/0009`). The gate runs `rv32ui-p-*` through
-riscv-tests' standard environment, unmodified. To start each test and report its result, that
+**Also in Phase 2: the trap minimum** (`decisions/0009`, amended 2026-09-28). The gate runs
+`rv32ui-p-*` through riscv-tests' standard environment, unmodified: its `riscv_test.h` and its
+`link.ld`, so memory sits at `0x80000000`. To start each test and report its result, that
 environment needs a little of the privileged architecture: `Zicsr`, six machine-mode CSRs, the
-environment-call exception and `mret`. Conformance adds the illegal-instruction exception, and the
-benchmark adds the one counter it reads, `instret`. Precise traps in the pipeline are still Phase
-3's to design. What this buys is a trap implementation known to work before pipelining starts.
+environment-call exception and `mret`. Conformance adds the illegal-instruction exception and four
+ID registers that may read as zero. The harness adds the one counter it reads, `instret`. **Pin the
+Privileged Architecture before writing any of it.** Precise traps in the pipeline are still Phase
+3's to design. What this buys is a trap implementation known to work before pipelining starts. The
+benchmark's decoder will need `M`, so it first runs on the core in Phase 3.
 
 ---
 
@@ -313,7 +318,8 @@ structurally cannot.
 **1. Unit self-checking testbenches** *(Phase 0–1)* — yours. Exhaustive wherever the input
 space is small enough to afford it.
 
-**2. `riscv-tests`** *(Phase 2)* — the classic hand-written per-instruction tests
+**2. `riscv-tests`** *(Phase 2 for `rv32ui`; Phase 3 for `rv32um` and `rv32mi`)* — the classic
+hand-written per-instruction tests
 (`rv32ui-p-*`, `rv32um-p-*`, `rv32mi-p-*`). Bring-up needs a linker script, a `tohost`
 termination mechanism, and an ELF loader in your testbench. Cheapest real external check
 available; do it as early as it will run.
