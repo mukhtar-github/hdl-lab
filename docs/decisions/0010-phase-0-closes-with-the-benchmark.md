@@ -91,9 +91,11 @@ now checked.
 - **Harder:** Phase 2 now waits on software. The decoder may well take longer than the rest of
   Phase 1. This is the cost `0004` already accepted knowingly: "a genuine detour when the instinct
   is to go build the adder".
-- **Found while writing this:** no gate has been tagged, though the roadmap asks for one at every
+- **Found while writing this:** no gate had been tagged, though the roadmap asks for one at every
   gate. Phase 0's waveform criterion merged at `f4f1f33` (#1), and Phase 1's gate at `5d664db`
-  (#2).
+  (#2). Phase 1's gate is now tagged `v0.1-alu-golden-model-passing` (2026-09-28). `make alu`
+  and `make mutate-alu` were re-run at that commit first, in a clean worktree, and both passed.
+  Phase 0 gets its tag when it closes.
 - **Revisit if** the benchmark's scope makes this gate unreachable in reasonable time. Then shrink
   the benchmark's first version, for instance to fewer frame types, and say so in a record. Do not
   drop the gate.
