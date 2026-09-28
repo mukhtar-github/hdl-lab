@@ -32,13 +32,16 @@ pins; see `reference/README.md`. Before any test runs, the environment:
 - reads `mhartid` (lines 170-172);
 - writes `mie`, `mtvec`, `mstatus` and `mepc`, and ends its setup with `mret` (134-140, 219-248);
 - writes registers a core may not have: `satp`, `pmpaddr0`, `pmpcfg0`, `mnstatus`, `medeleg`,
-  `mideleg`. Before each write it points `mtvec` at the next instruction. So a core without those
-  registers must take an illegal-instruction trap there and carry on (109-140);
+  `mideleg`. Before each write it points `mtvec` at the next instruction. So a core may trap on
+  them or ignore the write: both land in the same place (109-140). `mie` is the exception. It is
+  written before its guard is set, while `mtvec` still points at that write, so a core that traps
+  on `mie` loops there forever (134-140);
 - ends every test with `ecall`, which its trap handler identifies through `mcause` (193-218,
   262-277).
 
-That is `Zicsr`, six machine-mode CSRs, two exceptions and `mret`. Phase 2's gate needs all of
-them, and the roadmap adds none of them until Phase 3.
+That is `Zicsr`, six machine-mode CSRs, the environment-call exception and `mret`. Phase 2's gate
+needs all of them, and the roadmap added none of them until Phase 3. rv32ui does not *test* any of
+this. It uses it to start each test and to report the result.
 
 The benchmark needs a CSR too. It measures its own work with `rdinstret`
 (`bench/rv32/crc_itu_ref.c:105-108`). `0004` promises that "the same program, unmodified" runs on
@@ -68,15 +71,23 @@ the core. On a core without the `instret` counter it takes an illegal-instructio
 
 1. **Keep `Zicsr` and traps in Phase 3, and give Phase 2 a hand-written test environment** that
    ends each test with a plain store to `tohost`. Rejected.
-   - `0003`'s point is to run someone else's tests. A hand-written environment keeps their test
-     bodies but replaces exactly the part that checks trap entry and exit.
-   - It also moves the first trap design into the pipelined core, the hardest place to get it right.
+   - The instruction tests would run unchanged, since they do not test traps. What a hand-written
+     environment replaces is the pass/fail reporting. That is where this project's harnesses have
+     already lied, three times: the `htif_exit` race that dropped the last byte of output
+     (`bench/rv32/README.md`), the stale build reported under another configuration
+     (`docs/bugs/0004`), and a comparison that compared nothing (journal, 2026-09-26). Reporting
+     written here would be checked by no one else. The standard environment's reporting is shared
+     by every core that runs riscv-tests.
+   - The pipelined core would then take the project's first trap, with nothing known-good to check
+     its trap changes against.
 2. **Build the whole privileged scope in Phase 2**: timer, interrupts, user mode, PMP. Rejected.
    The gate needs a fraction of it, and the rest is decided better once the pipeline's shape is
    known (Decision 3).
 3. **Build in Phase 2 the minimum the standard environment needs, and run that environment
-   unmodified.** Accepted. Trap entry is designed first in the single-cycle core, where it is
-   cheapest to get right, and carried into the pipeline from there.
+   unmodified.** Accepted. It does not spare Phase 3 the hard part: precise exceptions in a
+   five-stage pipeline still have to be designed there. What it buys is a trap implementation known
+   to work, and a passing suite, before pipelining starts. Phase 3's changes are then checked
+   against something that already works, rather than debugged together with it.
 
 ### The RTOS boot
 
@@ -95,14 +106,24 @@ the core. On a core without the `instret` counter it takes an illegal-instructio
    - `Zicsr`: the six CSR instructions;
    - the CSRs `mstatus`, `mtvec`, `mepc`, `mcause`, `mhartid` and `mie`. `mie` may be all zeros
      until interrupts exist;
-   - the illegal-instruction exception, raised for any unimplemented instruction or CSR, and the
-     environment-call exception;
+   - the environment-call exception;
+   - the illegal-instruction exception, raised for any unimplemented instruction or CSR, and for a
+     write to a read-only CSR. rv32ui would pass without it. It is here because conformance
+     requires it:
+     - `rv32mi`'s `illegal` test executes an illegal instruction and expects this trap, and checks
+       `mtval` (`isa/rv64mi/illegal.S:19-21`, `154-160`);
+     - the CSR cases come from the Privileged Architecture, which is to be checked in the version
+       pinned under Decision 3. `rv32mi`'s `csr` test checks them only on a core with user mode
+       (`isa/rv64si/csr.S:89`, `113-125`). ACT4 will check more.
+
+     It is also why `mie` must exist;
    - `mret`;
    - the `instret` counter, whose low 32 bits the benchmark reads.
 
    Bring-up may use any environment. The gate may not.
 3. **The rest of the privileged scope is open, and must be fixed before Phase 3's pipeline design
-   starts.** The items are listed below. The deadline is the point of this item. A precise trap
+   starts.** The items are listed below. ACT4's configuration file (roadmap, rung 3) will require
+   every one of them to be declared anyway. The deadline is the point of this item. A precise trap
    and a mispredicted branch both flush the younger instructions, so where traps are taken belongs
    to the same design as where branches resolve (Prediction A).
 4. **The RTOS boot stays in the Phase 3 gate**, as a test of Decision 3's scope, not as something
@@ -119,7 +140,7 @@ riscv-tests `bcffa2b`'s `isa/rv32mi/Makefrag`.
 | User mode, and PMP | Whether the chosen RTOS needs either. `pmpaddr` tests PMP. |
 | Counters beyond the low half of `instret`: `cycle`, the RV32 upper halves, `time` | `zicntr` and `instret_overflow` test them, and Phase 4 will want `cycle`. |
 | Misaligned addresses: handled in hardware, or trapped | `ma_addr`, `ma_fetch` and the four `*-misaligned` tests. |
-| `ebreak`, and the rest of the exception set | `sbreak`, `breakpoint`, `illegal`, `shamt`. |
+| `ebreak`, `mtval`, and the rest of the exception set | `sbreak`, `breakpoint`, `illegal`, `shamt`. `illegal` accepts `mtval` as zero or the instruction word; `ma_addr` reads it too. |
 | The machine information CSRs `misa`, `mvendorid`, `marchid` and `mimpid`, and `mscratch` | `mcsr` reads all four; `csr` reads `misa` and works on `mscratch`. Rule 4 of the roadmap's standard/custom boundary already requires the ID registers to be set. |
 | Which RTOS: Zephyr or FreeRTOS | The roadmap names both. |
 | Which version of the Privileged Architecture | To be pinned in `reference/` before it is implemented (`0006`). |
@@ -141,8 +162,9 @@ scope does. Both land in Phase 3.
 
 - **Phase 2 grows, by a known amount:** six instructions, six CSRs, two exceptions, `mret` and
   one counter.
-- **The Phase 2 gate means more.** riscv-tests' own environment checks trap entry and exit on every
-  test, not an environment written here.
+- **The Phase 2 gate's verdicts are not reported by code written here.** riscv-tests' own
+  environment starts and ends every test, through traps the core must take correctly. A bug in
+  home-made reporting cannot turn a failure into a pass.
 - **The benchmark can run unmodified on the Phase 2 core**, as soon as the core executes anything
   (`0004`).
 - **Phase 3 starts with its privileged scope fixed**, rather than discovering it during pipeline
@@ -150,7 +172,9 @@ scope does. Both land in Phase 3.
 - **Corrected in the same change:**
   - `bench/rv32/README.md`, `htif.h` and the header of `bench/rv32/Makefile` now say that the
     benchmark runs without an OS, not that the core has none.
-  - `roadmap.md` Phases 2 and 3 and its rung 2 now say what this record decides, each citing it.
+  - `roadmap.md` Phases 2 and 3, its rung 2, and its list of early choices that are painful to
+    reverse now say what this record decides, each citing it. That list gains the trap and CSR
+    path.
 - **Forecloses** an OS under the benchmark, and a hand-written environment for the Phase 2 gate.
 - **Revisit if** line-rate input becomes interrupt-driven. Then the interrupt handler is part of
   the workload, and is measured as a declared term. Also revisit if Decision 3's scope does not fit
@@ -166,6 +190,6 @@ and `ma_data`, which need more for the reasons above, are excepted. Phase 2 show
 other test does.
 
 **The trap logic built for the single-cycle core carries into the pipeline without a redesign of its
-CSRs or its trap causes.** What changes is where in the pipeline a trap is taken. If Phase 3
-rewrites the CSR file or the trap-entry sequence, building them early bought less than this record
-assumes.
+CSRs or its trap causes.** What changes is where in the pipeline a trap is taken, which Phase 3
+designs in any case. If Phase 3 rewrites the CSR file or the trap-entry sequence, building them
+early bought less than this record assumes.
