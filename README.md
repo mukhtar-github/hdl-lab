@@ -39,7 +39,7 @@ theatre.
 
 ---
 
-## Current status — Phase 0 closing, Phase 1 started
+## Current status — Phase 0 open for the benchmark, Phase 1 under way
 
 ```
 ✅ Icarus Verilog 13.0     ✅ mux2: structural + behavioral, 8/8 exhaustive
@@ -49,34 +49,39 @@ theatre.
 ✅ Spike 1.1.0 (tag v1.1.0)✅ make lint — 9 modules, green and meaningful
                            ✅ make mutate-alu — 7/7 injected bugs killed
                            ✅ bench/rv32 on Spike — 20/20 runs identical
+                           ✅ bench/stimulus — generator, 23 tests
 ```
 
-**The Phase 0 gate is not "everything compiles."** It is:
+**The Phase 0 gate is not "everything compiles."** Since `docs/decisions/0010` it has two
+criteria:
 
-> Introduce a bug deliberately and locate it by reading a waveform, without adding print
-> statements.
+> 1. Introduce a bug deliberately and locate it by reading a waveform, without adding print
+>    statements.
+> 2. Run the benchmark on Spike, check it, and freeze it.
 
-**That gate is closed** — `docs/bugs/0002-adder-unknown`, diagnosed from the waveform with the
+**The first is met** — `docs/bugs/0002-adder-unknown`, diagnosed from the waveform with the
 mechanism withheld, which is a harder test than Exercise 2's self-planted bug. It was blocked
 until 2026-09-12 by a waveform viewer that had never once run (`docs/decisions/0005`).
 
-**Phase 0 is not finished, though, and the remaining item is not a gate.** Decision `0004` is
-binding: the benchmark's stimulus generator, reference decoder and **Spike reference result** are
-Phase 0 work, built before the core executes them. The roadmap places the benchmark in Phase 0
-*"in parallel"* with the primitives, so Phase 1 work proceeding is not the benchmark sliding.
+**The second is open, and Phase 0 with it.** Decision `0004` makes the benchmark binding: its
+stimulus generator, reference decoder and **Spike reference result** are Phase 0 work, built
+before the core executes them. Until `0010` nothing checked that; the journal had to repeat a guard
+three times instead. Phase 1 continues *"in parallel"*, as the roadmap intends. **Phase 2's core
+runs no program until the benchmark criterion passes.**
 
 **The toolchain is no longer the blocker.** `bench/rv32/` builds bare-metal RV32 programs and runs
 them under Spike, and `crc_itu_ref.c` — CRC-ITU over a GT06-shaped frame — is the first real piece
 of the decoder executing on the reference simulator. Spike is pinned to tag `v1.1.0`, built from
-source rather than the Homebrew tap, for a reason worth reading in `bench/rv32/README.md`. What
-remains is the stimulus generator and the full decoder.
+source rather than the Homebrew tap, for a reason worth reading in `bench/rv32/README.md`. The
+stimulus generator exists too (`bench/stimulus`). What remains is the reference decoder, its check
+against the generator's intent log, and the captured reference results.
 
-**In progress — `docs/experiments/0001-what-belongs-in-a-reference-result.md`.** The
-reference-discipline exercise: establish what a golden result actually *consists of* before any
-number gets quoted as a denominator. The hypothesis section is deliberately blank. Fill it in
-before running anything; that ordering is the whole point of the file.
+**Open — `docs/experiments/0002-crc-pass-with-zbkb-and-zbc.md`.** What GCC's CRC pass emits when
+the target has Zbkb or Zbc. The author's hypothesis goes in first; Claude's prediction is sealed
+until then. (`experiments/0001` is answered.)
 
-Next hardware step: the register file.
+Next hardware step: the register file. Next benchmark step: the reference decoder, starting with
+what it does after a fault.
 
 ---
 

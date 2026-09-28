@@ -169,9 +169,16 @@ module exhaustively self-checked from the first one.
 generator, reference decoder and Spike reference result are built *here*, before the core
 exists, not in Phase 4 when they would be shaped by what the core turned out to do well.
 
-**Gate:** you can find a bug you deliberately introduced by reading a waveform, without
-adding print statements. *This gate requires a working waveform viewer — see the open
-questions in `docs/README.md`.*
+**Gate — both of these** (`decisions/0010`, added 2026-09-28):
+
+1. You can find a bug you deliberately introduced by reading a waveform, without adding print
+   statements. *This gate requires a working waveform viewer — see the open questions in
+   `docs/README.md`.* Passed 2026-09-21.
+2. **The benchmark runs on Spike, and is frozen.** The reference decoder decodes the generated
+   stimulus bare metal on Spike. Its records are checked against the generator's intent by a
+   check that has been seen to fail. Every configuration the benchmark will be reported at is
+   declared and captured, and the benchmark is tagged. **Phase 2's core runs no program until this
+   passes.**
 
 ---
 
