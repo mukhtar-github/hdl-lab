@@ -9,14 +9,14 @@ stale. A new session checks it against the live state before acting on it.
 ---
 
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
-for both rounds of amendments to `0009` and `0010`, and on 2026-09-29 for `0011`.*
+for both rounds of amendments to `0009` and `0010`, and on 2026-09-29 for `0011` and `0012`.*
 
 ## hdl-lab handoff (2026-09-28)
 
-**State:** `main` was at `34e94c6` when this was written, and PRs #8–#19 are all merged. **Phase 0
-is open again**, for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag
-is `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is local only, as it
-must be.
+**State:** `main` was at `34e94c6` when this was written, and at `257d20f` when it was last updated,
+with PRs #8–#23 all merged and `0012` in review. **Phase 0 is open again**, for the benchmark
+(`decisions/0010`). Phase 1's gate is passed. The only pushed tag is `v0.1-alu-golden-model-passing`.
+The tag `sealed/0002-claude-prediction` is local only, as it must be.
 
 **If you are a second assistant reading this:** it replaces any other handoff. Where anything
 disagrees with `roadmap.md` or a decision record, those win. **Freshness is by commit, not by
@@ -67,10 +67,13 @@ stale the same day.)
 1. **The reference decoder:** Phase 0's critical path now.
    - **Settled by `0011`:** what it does after a broken frame. A broken frame costs only its own
      bytes, and a GT06 length fault cannot reach variant dispatch (Findings 7 and 8).
-   - **Still to decide before writing any of it:**
-     - its output fields and units;
-     - how `stimulus.bin` reaches it under Spike, including how it learns each connection's
-       protocol (`0011` assumes it knows).
+   - **Settled by `0012`:** what it reports and sends back (Finding 9). Shared quantities have exact
+     units, for example 1/9,000,000 degree and metres per hour. It answers GT06 login and heartbeat,
+     and JT808 `0x0102`, `0x0200` and `0x0704`, but only frames that pass. Records are ordered by
+     connection. SPEC §3 carries the full field table.
+   - **Still to decide before writing any of it:** how `stimulus.bin` reaches it under Spike. That
+     includes how it learns each connection's protocol (`0011` assumes it knows), and where records
+     are serialised relative to the measured window (`0012`: serialising is not decoding).
 
    Before freezing, measure simulated cycles per second on a proxy of about the planned core's
    size, for example an open-source RV32 core under Icarus. Convert with the planned core's cycles
@@ -89,7 +92,7 @@ stale the same day.)
    sets one.
 
 **Where things are**
-- **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0011`.
+- **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0012`.
 - **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
   whose `intent.jsonl` is the decoder's ground truth, not its expected output.
 - **What happened and what is unresolved:** `docs/journal/2026-09.md`, latest entries at the bottom.

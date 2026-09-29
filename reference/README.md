@@ -33,6 +33,15 @@ Added 2026-09-28, from the same commit:
 |---|---|
 | `Gt06FrameDecoderTest.java` | Traccar's GT06 framer test. With `Jt808FrameDecoderTest.java`, it anchors the port of both framers in `bench/evidence/framing.py` (`PROTOCOL-EVIDENCE` Finding 8). Real-device hex again, so it is only used locally and none of its bytes is committed. |
 
+Added 2026-09-29, from the same commit, for `PROTOCOL-EVIDENCE` Finding 9 and `decisions/0012`:
+
+| File | Why it is here |
+|---|---|
+| `DateBuilder.java`, `BaseProtocolDecoder.java`, `DeviceSession.java` | Which time zone each decoder reads a time in, when nothing is configured: UTC for GT06 and for `0x5501`. `DateBuilder` also makes a two-digit year 2000 + YY. |
+| `UnitsConverter.java` | Traccar's km/h-to-knots ratio, rounded to six places |
+| `Position.java` | The only range check on a decoded location: latitude and longitude |
+| `Jt808FrameEncoder.java` | How a JT808 response is escaped. Its `E7` alphabet escapes `0x3D`, which gives `bench/stimulus` rule R9 its source. |
+
 **Read the size ratio carefully.** ~30-40x more code in field handling than framing tells you
 where the *variant complexity* lives. It says nothing about where the *cycles* go — a 77 KB
 decoder may execute one narrow path per frame while a 2 KB frame decoder runs over every byte.
@@ -43,8 +52,10 @@ Do not let a source-size observation quietly become evidence for a cycle-count c
 
 - **Source:** https://github.com/traccar/traccar
 - **Path:** `src/main/java/org/traccar/protocol/`, and since 2026-09-27 also
-  `src/main/java/org/traccar/helper/` and `src/test/java/org/traccar/protocol/`
-- **Fetched:** 2026-09-17; the files added above on 2026-09-27 and 2026-09-28
+  `src/main/java/org/traccar/helper/` and `src/test/java/org/traccar/protocol/`. Since 2026-09-29,
+  also `BaseProtocolDecoder.java` in `src/main/java/org/traccar/`, and one file each from its
+  `session/` and `model/`.
+- **Fetched:** 2026-09-17; the files added above on 2026-09-27, 2026-09-28 and 2026-09-29
 - **Pinned commit:** `847edd2c8c4dcc47426fb76b7800b342dea3cde6`, for every file
 - **Licence:** Apache-2.0, Copyright 2012-2026 Anton Tananaev
 
@@ -64,7 +75,10 @@ for p in main/java/org/traccar/protocol/Gt06FrameDecoder main/java/org/traccar/p
          test/java/org/traccar/protocol/Gt06ProtocolDecoderTest \
          test/java/org/traccar/protocol/Jt808ProtocolDecoderTest \
          test/java/org/traccar/protocol/Jt808FrameDecoderTest \
-         test/java/org/traccar/protocol/Gt06FrameDecoderTest; do
+         test/java/org/traccar/protocol/Gt06FrameDecoderTest \
+         main/java/org/traccar/helper/DateBuilder main/java/org/traccar/helper/UnitsConverter \
+         main/java/org/traccar/BaseProtocolDecoder main/java/org/traccar/session/DeviceSession \
+         main/java/org/traccar/model/Position main/java/org/traccar/protocol/Jt808FrameEncoder; do
     curl -sSfL -o "reference/${p##*/}.java" "$B/$p.java"
 done
 ```
