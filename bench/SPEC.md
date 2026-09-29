@@ -5,6 +5,7 @@
   unset parameters that the list below does not name. Nothing already here changes.
 - **Amended 2026-09-28 and 2026-09-29:** see the amendments at the end. §7's frame count is also
   sized for RTL simulation. §5 records Traccar's scans, and the decoder's rule is `decisions/0011`.
+  §3's records get their fields, units, responses and order from `decisions/0012`.
 - **Date:** 2026-09-21
 - **Classification:** specification-derived reconstruction (`bench/README.md` rule 3)
 
@@ -259,3 +260,127 @@ Two consequences for this specification:
 - **§4's length-field disagreement never becomes a frame.** Its bytes are reported in a `resync`
   record, like a truncated frame's, so §3's `malformed` status is not produced by any fault the
   generator makes today.
+
+# Amendment — 2026-09-29: §3's records, from `decisions/0012`
+
+§3's record shape stands. `decisions/0012` fixes what goes in it, and why. This section is the
+contract that the reference decoder and the `0010` check both implement.
+
+**Records.**
+- A frame produces one record. The exception is a `0x0704` batch whose status is `ok`, which
+  produces one record per location it carries, each with `record=<i>` counting from 1. A batch with
+  no location produces one record, without `record`.
+- A run of bytes outside every frame produces one `resync` record (`0011`).
+- Each response the decoder sends produces one record, with status **`sent`**. It comes immediately
+  after the record or records of the frame it answers.
+
+**Order.** The canonical order is by connection, then by stream order within each connection. It is
+not the order of input: how records from different connections interleave depends on where the
+chunks cut the streams, which `0011` rule 8 keeps out of the result.
+
+**Text.** `<conn> <protocol> <type> <status> <field>=<value> …`
+- `protocol` is `gt06` or `jt808`.
+- `type` is lowercase hex, two digits for GT06 and four for JT808, `sentence` for a sentence, and `-`
+  for a resync run. A response's type is its own: `0x01`, `0x13` or `0x8001`.
+- Fields are sorted by name. Values are decimal integers, with a leading `-` when negative. Three
+  are not: `device` is the hex digits of the IMEI or terminal ID, as the login or header carries
+  them, and `bytes` and `text` are lowercase hex.
+
+**Every record about received bytes** carries `at`, the offset of its first byte in its
+connection's stream, and `len`, its length on the wire. `crc_fail`, `malformed`, `unsupported` and
+`resync` records carry nothing else.
+
+**`malformed`** is a frame that passes framing and its check, but where the type's fixed fields do
+not fit the content, a BCD digit is above 9, a date or time does not exist (or a GT06 year byte is
+above 99), or a latitude is beyond 90° or a longitude beyond 180°.
+
+## Shared quantities
+
+A quantity that more than one frame type carries has one name and one exact unit everywhere.
+
+| Field | Unit | Width |
+|---|---|---|
+| `time` | seconds since 1970-01-01 00:00:00 UTC | u32 |
+| `lat`, `lon` | 1/9,000,000 degree, north and east positive | i32 |
+| `speed` | metres per hour | u32 |
+| `course` | degrees | u16 |
+| `valid` | 0 or 1: the position is fixed | — |
+| `satellites` | count | u8 |
+| `altitude` | metres | i16 |
+| `odometer` | metres | u64 |
+
+Every other field is the frame's own unsigned integer, and its meaning is given by its record's
+protocol and type.
+
+## GT06 — from the vendor document v1.8.1
+
+Every `ok` record carries `serial`, and `device` once the connection has logged in.
+
+| Type | Field | Source | From the frame |
+|---|---|---|---|
+| `0x01` login | `device` | Terminal ID, §5.1.1.4 | the last 15 of its 16 BCD digits: the IMEI |
+| `0x12` location | `time` | Date Time, §5.2.1.4 | six binary bytes, YY MM DD hh mm ss, read as UTC **[assumption]** |
+| | `satellites` | §5.2.1.5 | the low nibble |
+| | `lat`, `lon` | §5.2.1.6, §5.2.1.7 | ×5. `lat` is negative when Course Status bit 10 is clear, `lon` when bit 11 is set (§5.2.1.9) |
+| | `speed` | §5.2.1.8 | km/h ×1,000 |
+| | `course` | Course Status bits 0-9 | degrees |
+| | `valid` | Course Status bit 12 | |
+| | `differential` | Course Status bit 13 | 1 is differential, 0 real-time |
+| | `mcc`, `mnc`, `lac`, `cid` | §5.2.1.10 to §5.2.1.13 | as carried: 2, 1, 2 and 3 bytes |
+| `0x13` heartbeat | `info` | Terminal Information, §5.4.1.4 | as carried |
+| | `voltage`, `gsm` | §5.4.1.5, §5.4.1.6 | as carried: levels, not units |
+| | `alarm`, `language` | Alarm/Language, §5.4.1.7 | the former byte, and the latter |
+
+## JT808 — from Traccar at `847edd2c`
+
+Every `ok` binary record carries `device` (the header's terminal ID, as hex digits), `header` (`2013`
+or `2019`, the layout that detection found) and `index`. Line numbers are
+`Jt808ProtocolDecoder.java`'s unless marked Jt600.
+
+| Type | Field | Source | From the frame |
+|---|---|---|---|
+| `0x0102` | none | `:445-448` | Traccar reads nothing of the body |
+| `0x0200` | `alarm` | `:756` | as carried, 4 bytes |
+| | `status` | `:709` | as carried, 4 bytes |
+| | `valid` | status bit 1, `:723` | |
+| | `lat`, `lon` | `:725-737` | ×9. Negative when status bit 2 (`lat`) or bit 3 (`lon`) is set |
+| | `altitude` | `:760` | metres, signed |
+| | `speed` | `:761` | tenths of km/h ×100 |
+| | `course` | `:762` | degrees |
+| | `time` | `:763`, `:259-268` | BCD YYMMDDhhmmss, read as GMT+8 **[assumption]** |
+| | `odometer` | item `0x01`, `:791-793` | tenths of km ×100 |
+| | `fuel` | item `0x02` | as carried, 2 bytes |
+| | `inputs` | item `0x25` | as carried, 4 bytes |
+| | `adc1`, `adc2` | item `0x2B` | as carried, 2 bytes each |
+| | `rssi` | item `0x30` | as carried |
+| | `satellites` | item `0x31` | count |
+| `0x0704` | per location: `0x0200`'s fields, `archive` and `record` | `:1634-1655` | `archive` is the batch's type byte, as carried |
+| `0x5501` | `time` | Jt600 `:97-103` | BCD DDMMYY hhmmss, read as UTC **[assumption]** |
+| | `lat`, `lon` | Jt600 `:105-112`, `:50-54` | BCD DD(D)MMmmmm: degrees ×9,000,000, plus ten-thousandths of a minute ×15. Negative when flags bit 1 (`lat`) or bit 2 (`lon`) is clear |
+| | `valid` | flags bit 0, Jt600 `:110` | the frame's own bit. Traccar then sets validity from the type instead (`:1527`) |
+| | `speed` | Jt600 `:114` | BCD knots ×1,852 |
+| | `course` | Jt600 `:115` | ×2, degrees |
+| | `rssi`, `satellites` | `:1529`, `:1530` | as carried |
+| | `odometer` | `:1531` | km ×1,000 |
+| | `battery`, `cid`, `lac`, `product`, `status`, `alarm` | `:1533-1548` | as carried |
+| sentence | `text` | `:345-357`, `:653-663` | the characters between the parentheses |
+| | `device` | | the device of the connection's most recent binary frame |
+
+`0x0200` items other than the six above are skipped by their length. The 20-byte vendor form that
+Traccar reads instead of items (`:765-775`) is not decoded; rule R11 keeps it out of the stimulus.
+
+## Responses
+
+| Answers | `type` | `bytes` | Source |
+|---|---|---|---|
+| GT06 `0x01`, `0x13` | the frame's | `78 78 05`, protocol number, serial, CRC-ITU over length to serial, `0D 0A` | the document, §5.1.2 and §5.4.2 |
+| JT808 `0x0102`, `0x0200`, `0x0704` | `0x8001` | the frame's delimiter; `80 01`; attribute 5, with bit 14 in the 2019 layout; the frame's version byte in the 2019 layout; its terminal ID; index `00 00`; its index, its type, and `00`; the XOR of everything from `80` to here; the delimiter. All but the two delimiters escaped in the delimiter's alphabet | `Jt808ProtocolDecoder.java:126-161`, `Jt808FrameEncoder.java:25-49` |
+
+Only a frame whose status is `ok`, and whose connection has a device, gets a response.
+
+**Out of scope in draft 1, and why:**
+- **A registry of provisioned devices.** No source gives its contents or its size. The roadmap's
+  "identifier lookup" is, here, the connection-to-device binding.
+- **Traccar's other responses:** to a GT06 `0x12` or an unknown GT06 type, which the document gives
+  none for; to a frame that fails its check, or is malformed; to a `0x5501` with attribute bit 15;
+  and to a `BASE,2` sentence, which carries Traccar's wall clock.

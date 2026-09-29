@@ -33,8 +33,9 @@ A stimulus is versioned as generator + parameters + seed, and never committed (S
 
 **`intent.jsonl` is not the expected output.** It records what was generated. What a decoder
 should *print* for a truncated frame, or for the frame after one, depends on how it resynchronises,
-and that is the reference decoder's design, fixed by `decisions/0011`. In `0004`'s chain the
-reference decoder produces the expected output. The intent log is what that output will be checked
+and that is the reference decoder's design, fixed by `decisions/0011`. What each record contains,
+and what the decoder sends back, is fixed by `decisions/0012`. In `0004`'s chain the reference
+decoder produces the expected output. The intent log is what that output will be checked
 against.
 
 ## Every parameter is an assumption
@@ -102,7 +103,7 @@ are here.
 | R6 | Field values uniform over their sourced ranges | There is no source for real distributions. How often a JT808 byte needs escaping follows from this, and destuffing work depends on it (Prediction B), so the manifest reports it. |
 | R7 | Counters: GT06 from 1, JT808 from 0 | GT06 per doc §4.5. JT808 has no pinned source. |
 | R8 | The 2019 version byte is 1 | Traccar reads it and never interprets it. |
-| R9 | The `E7` alphabet escapes `0x3D` | It is the inverse of the decoder's table. A raw `0x3D` would decode the same. |
+| R9 | The `E7` alphabet escapes `0x3D` | It is the inverse of the decoder's table. A raw `0x3D` would decode the same. Traccar's own encoder escapes it too (`Jt808FrameEncoder.java:33-35`, `PROTOCOL-EVIDENCE` Finding 9). |
 | R10 | The 2013 authentication body, in both formats | Traccar never reads it. The 2019 body has no pinned source. |
 | R11 | No location whose items Traccar would read as its 20-byte vendor format | Neither Traccar nor the benchmark decoder may be handed a frame that the other reads differently. |
 | R12 | The ranges no source gives | Stated so they can be found, not because they are right. |
