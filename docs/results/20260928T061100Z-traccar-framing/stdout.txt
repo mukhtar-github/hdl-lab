@@ -1,0 +1,138 @@
+Inputs (reference/, gitignored; Traccar at 847edd2c8c4dcc47426fb76b7800b342dea3cde6):
+  69c48c0e70bab70f2396912db5db9a803a504aac1ed70164a000f37f02eef092  Gt06FrameDecoder.java
+  138f4c54dd9bb93ea01d50a25fa5b8122691b822b0cb5f358700e70432318f34  Jt808FrameDecoder.java
+  b0f288d3a614dbb0045625c98faabd770a4f33fe510b606de192034571c7ea82  Gt06FrameDecoderTest.java
+  32867ded42523ad53c5ed366379a71f9985ada5796fafa2faea13e3edbdafdfb  Jt808FrameDecoderTest.java
+
+## 1. The port against Traccar's own framer tests
+
+Gt06FrameDecoderTest: the port reproduces 9 of 9 vectors
+Jt808FrameDecoderTest: the port reproduces 3 of 3 vectors
+
+Each deliberately broken port must fail at least one vector:
+  gt06: no search for 0D 0A              fails 6 of 9
+  jt808: no skipping to a frame start    fails 1 of 3
+  jt808: no unescaping                   fails 2 of 3
+
+With :53's sentence length corrected, the JT808 port still fails 0 of 3.
+Every test vector sits at the start of its own buffer, where the two lengths agree.
+No vector in either test puts two frames in one buffer.
+
+## 2. Constructed streams: a broken frame, then whole frames
+
+F: JT808 location 0x0200, 2013 format. G: GT06 status 0x13. Made by bench/stimulus's
+encoders from SplitMix64 seed 8. The words in brackets say how a frame was broken, as
+rule R15 would break it. "Left waiting" is bytes the framer holds because it took one of
+them as a frame start and no closing byte has come.
+
+JT808 7E: all whole (control)
+  sent:     F1 | F2 | F3 | F4 | F5 | F6 | F7
+  returned: F1 | F2 | F3 | F4 | F5 | F6 | F7
+  whole frames lost: none
+
+JT808 7E: F1 truncated to half
+  sent:     F1 (truncated) | F2 | F3 | F4 | F5 | F6 | F7
+  returned: 24 bytes, no whole frame | 34 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame   (137 bytes left waiting)
+  whole frames lost: F2, F3, F4, F5, F6, F7
+
+JT808 7E: F1 lost only its closing 7E
+  sent:     F1 (truncated by 1) | F2 | F3 | F4 | F5 | F6 | F7
+  returned: F1, read as whole | 56 bytes, no whole frame | 2 bytes, no whole frame   (137 bytes left waiting)
+  whole frames lost: F2, F3, F4, F5, F6, F7
+
+JT808 7E: F1 and F4 truncated
+  sent:     F1 (truncated) | F2 | F3 | F4 (truncated) | F5 | F6 | F7
+  returned: 24 bytes, no whole frame | 34 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | F5 | F6 | F7
+  whole frames lost: F2, F3
+
+JT808 7E: 6 garbage bytes after F1 (no_sync, rule R16)
+  sent:     F1 | garbage | F2 | F3 | F4 | F5 | F6 | F7
+  returned: F1 | F2 | F3 | F4 | F5 | F6 | F7
+  whole frames lost: none
+
+JT808 E7: all whole (control)
+  sent:     F1 | F2 | F3 | F4 | F5 | F6 | F7
+  returned: F1 | F2 | F3 | F4 | F5 | F6 | F7
+  whole frames lost: none
+
+JT808 E7: F1 truncated to half
+  sent:     F1 (truncated) | F2 | F3 | F4 | F5 | F6 | F7
+  returned: 23 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame   (1 byte left waiting)
+  whole frames lost: F2, F3, F4, F5, F6, F7
+
+JT808 E7: F1 lost only its closing E7
+  sent:     F1 (truncated by 1) | F2 | F3 | F4 | F5 | F6 | F7
+  returned: F1, read as whole | 2 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame   (1 byte left waiting)
+  whole frames lost: F2, F3, F4, F5, F6, F7
+
+JT808 E7: F1 and F4 truncated
+  sent:     F1 (truncated) | F2 | F3 | F4 (truncated) | F5 | F6 | F7
+  returned: 23 bytes, no whole frame | 2 bytes, no whole frame | 2 bytes, no whole frame | F5 | F6 | F7
+  whole frames lost: F2, F3
+
+JT808 E7: 6 garbage bytes after F1 (no_sync, rule R16)
+  sent:     F1 | garbage | F2 | F3 | F4 | F5 | F6 | F7
+  returned: F1 | F2 | F3 | F4 | F5 | F6 | F7
+  whole frames lost: none
+
+JT808 7E: a ( sentence after a binary frame, one buffer
+  sent:     F1 | sentence | F2
+  returned: F1 | exception: readRetainedSlice(85) with 79 bytes readable   (79 bytes left waiting)
+  whole frames lost: sentence, F2
+
+  the same, with :53's length corrected
+  sent:     F1 | sentence | F2
+  returned: F1 | sentence | F2
+  whole frames lost: none
+
+GT06: all whole (control)
+  sent:     G1 | G2 | G3 | G4 | G5
+  returned: G1 | G2 | G3 | G4 | G5
+  whole frames lost: none
+
+GT06: 6 garbage bytes after G1 (no_sync, rule R16)
+  sent:     G1 | garbage | G2 | G3 | G4 | G5
+  returned: G1 | 21 bytes, no whole frame | G3 | G4 | G5
+  whole frames lost: G2
+
+GT06: G1 truncated to 8 of its 15 bytes
+  sent:     G1 (truncated) | G2 | G3 | G4 | G5
+  returned: 23 bytes, no whole frame | G3 | G4 | G5
+  whole frames lost: G2
+
+GT06: G1's length field 2 too long, its CRC recomputed
+  sent:     G1 (length +2) | G2 | G3 | G4 | G5
+  returned: G1 (length +2) | G2 | G3 | G4 | G5
+  whole frames lost: none
+
+GT06: G1's CRC wrong
+  sent:     G1 (bad CRC) | G2 | G3 | G4 | G5
+  returned: G1 (bad CRC) | G2 | G3 | G4 | G5
+  whole frames lost: none
+
+## 3. The coverage stimulus, params/coverage.json, seed 1
+
+Its fault rates are chosen so that every class occurs, and are no claim about traffic.
+These counts show that the mechanism of section 2 occurs in the benchmark's own stimulus.
+They are not a rate. Sentences use :53's corrected length, so that only the delimiter
+pairing is counted.
+
+Per connection, its frames in order: . whole, T truncated, C bad check, L length,
+U unknown type, F flag-lying, g a garbage run before the next frame. A whole frame that
+does not come out whole is shown in upper case as X.
+
+  conn  0 jt808 E7  .F..F.C.g.TLXCUXgX
+  conn  1 gt06     ..TX..gX................
+  conn  2 jt808 7E  ...U......g..g...
+  conn  3 gt06     ..gX.TX....gU.....TX..
+  conn  4 jt808 7E  .TgXXXUC.LU..C.....g.g.
+  conn  5 jt808 E7  .......gTXgXXgXXXXCXXgXXXC..U.
+  conn  6 jt808 E7  .....gTgXCXXXXTXXXXFXXXXLgX
+  conn  7 gt06     .....C..gXC.......TX..
+  conn  8 jt808 7E  .TXFXUXXXTF....F
+  conn  9 gt06     .U.gX.U......gX..gX...L
+  conn 10 jt808 7E  ....................
+  conn 11 gt06     ....U..L....CgX...gX.
+
+gt06: 12 of 90 whole frames do not come out whole
+jt808: 37 of 108 whole frames do not come out whole
