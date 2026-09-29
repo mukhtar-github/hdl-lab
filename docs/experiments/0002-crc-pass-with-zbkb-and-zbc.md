@@ -75,12 +75,42 @@ make -C bench/rv32 check CRC_IMPL=bitwise ALGOFLAGS= ARCH=rv32im_zbkb_zbc   # D
 
 ## Hypothesis — the author's
 
-<!-- WRITTEN BEFORE THE RUN, without opening the sealed prediction below.
-     For each of B, C and D:
-       - instret: a number, or a range narrow enough to be wrong
-       - whether the 512-byte table is still in the image (.rodata 0x24c vs 0x4c)
-       - the mechanism: what GCC emits per byte, and why
-     And: does any of them beat the stated table (138,137)? By how much? -->
+None of my own for this experiment. I'm learning this material as the project goes. I asked a
+second assistant to write the hypothesis, and it follows below. I read it before this section was
+committed, so no blind prediction from me exists here.
+
+## Hypothesis — second assistant
+
+*Transcribed verbatim from the text the author pasted on 2026-09-29. Only the level of its first
+heading was changed, to fit this file.*
+
+Written after reading GCC's RISC-V CRC expander source. This is therefore **not a blind hypothesis about the mechanism**. The mechanism below is source-derived; the `instret` figures are predictions from the experiment's own measured baseline.
+
+Compiler assumed: **GCC 16.2.0**. The CRC expander was added to GCC's RISC-V backend in November 2024. The source says that a target with ZBC uses `clmul` for CRC calculation, while a target with ZBKB uses a table-based CRC with `bswap`/`brev8` for reflection.
+
+| Configuration             | Predicted `instret` | 512-byte table              | Predicted mechanism                                                                                                                                                            |
+| ------------------------- | ------------------: | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **B — `rv32im_zbkb`**     | **221,000–224,000** | **Yes — `.rodata = 0x24c`** | GCC keeps the table-based CRC, but replaces the software reflection sequences with hardware byte/bit reversal (`rev8`/`brev8`, represented in the backend as `bswap`/`brev8`). |
+| **C — `rv32im_zbc`**      | **124,000–128,000** | **No — `.rodata = 0x4c`**   | GCC uses the dedicated carry-less-multiply CRC expansion, principally `clmul`/`clmulh`, instead of a lookup table.                                                             |
+| **D — `rv32im_zbkb_zbc`** | **124,000–128,000** | **No — `.rodata = 0x4c`**   | GCC selects the ZBC/CLMUL CRC path; ZBKB does not add the table/reflection path on top of it.                                                                                  |
+
+For B, the arithmetic prediction comes from replacing the 20-instruction software reflection on each side of A's 51-instruction byte loop with approximately three instructions per reflection. That gives a predicted 17 instructions per byte, hence:
+
+`18,041 + 17 × 12,012 = 222,245`
+
+For C and D, the prediction is based on a roughly 9-instruction-per-byte CLMUL loop:
+
+`18,041 + 9 × 12,012 = 126,149`
+
+These are workload-derived predictions, not measured results.
+
+### What would change my mind
+
+For **B**, I would change the prediction if the built image drops the 512-byte table, if the per-byte disassembly does not show hardware reflection replacing the software reflection, or if `instret` falls materially outside the predicted range.
+
+For **C**, I would change the prediction if the table remains in the image, if the CRC loop is still table-driven, or if the measured `instret` is materially outside the predicted CLMUL range.
+
+For **D**, I would change the prediction if GCC chooses a different mixed strategy rather than the ZBC CLMUL path, particularly if the table reappears or the per-byte CRC operation is not based on `clmul`.
 
 ## Hypothesis — Claude's (sealed)
 
@@ -101,7 +131,8 @@ same commit. If the hash does not match, the prediction is void and that is reco
 
 ## What would change my mind
 
-<!-- The author's falsifiers, written before the run. Claude's are inside the sealed text. -->
+None of my own, for the same reason. The second assistant's falsifiers are in its section, and
+Claude's are inside the sealed text.
 
 ## Method
 
