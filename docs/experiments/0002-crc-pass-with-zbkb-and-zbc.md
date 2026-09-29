@@ -114,10 +114,12 @@ For **D**, I would change the prediction if GCC chooses a different mixed strate
 
 ## Hypothesis — Claude's (sealed)
 
-Written and sealed on 2026-09-25, before the author wrote the section above, and before any
-Zbkb or Zbc build existed. Only its hash is committed here. The text sits in a git object behind a
-**local** tag, which `git push` does not send, so it cannot be read by accident. Reading it
-deliberately before your own hypothesis is committed would spend the experiment.
+Written and sealed on 2026-09-25, before either section above was written and before any Zbkb or
+Zbc build existed. Only its hash was committed then, in `84a2054`. The text sat in a git object
+behind a **local** tag, which `git push` does not send, so it could not be read by accident.
+
+**Opened on 2026-09-29,** after both sections above were committed (`9b7f274`). Its SHA-256 matches
+the hash committed in `84a2054`:
 
 ```
 sha256  13361923f43677df4e03ffd5cca81c914a3af8c477c019526c3f1a3de6a65e2f
@@ -126,8 +128,62 @@ open    git cat-file blob sealed/0002-claude-prediction
 verify  git cat-file blob sealed/0002-claude-prediction | shasum -a 256
 ```
 
-When it is opened, the text is committed into this section verbatim and the hash is checked in the
-same commit. If the hash does not match, the prediction is void and that is recorded here.
+The text follows verbatim, between two comment markers. The tag stays local, so this checks it
+from the file alone:
+
+```bash
+sed -n '/^<!-- sealed text begins/,/^<!-- sealed text ends/p' \
+    docs/experiments/0002-crc-pass-with-zbkb-and-zbc.md | sed '1d;$d' | shasum -a 256
+```
+
+<!-- sealed text begins -->
+### Claude's prediction — sealed 2026-09-25, before any Zbkb or Zbc build existed
+
+**What it is predicted from.** My recollection of GCC's RISC-V CRC expanders, which I did not re-read
+for this. The recollection: when the target has Zbc (or Zbkc), a reversed CRC is expanded with two
+carry-less multiplies, using a reflected quotient and a reflected polynomial, so no bit reflection
+is needed. Otherwise, when it has Zbkb, GCC uses the table again, with the reflections done by
+`rev8` + `brev8`. Otherwise, the table with mask-and-shift reflection that 0001 saw. If that
+recollection is wrong, this prediction fails, and finding that out is part of what it tests.
+
+**B — `rv32im_zbkb`: 190,000 to 250,000, point estimate about 220,000. The 512-byte table stays.**
+- Mechanism: the table path again, but each 16-bit reflection becomes `rev8` + `brev8` + a shift,
+  about 3–4 instructions instead of 20.
+- About 17–18 instructions per byte instead of 51.
+- The `acc` fold's rotate becomes one `rori`, which saves 2 per iteration.
+
+**C — `rv32im_zbc`: 130,000 to 190,000, point estimate about 160,000. The table is gone** (`.rodata`
+back to `0x4c`).
+- Mechanism: two `clmul`s per byte, working in the reflected domain.
+- No reflection at all, about 12 instructions per byte.
+
+**D — `rv32im_zbkb_zbc`: C's algorithm, because Zbc wins in the expander. C minus 1,000 to 15,000.**
+- The rotate becomes `rori`, which saves 2,000.
+- If C zero-extends to 16 bits with two shifts per byte, Zbkb's `pack` may do it in one, which saves
+  up to 12,000 more.
+- No table.
+
+**Against the stated table (138,137):**
+- None of the three beats it by more than 5%.
+- C and D land between 0.95× and 1.4× of it.
+- B lands near 1.6× of it.
+
+In short: a carry-less multiply roughly ties an ordinary 512-byte table on this workload, and a
+bit-reverse instruction alone gets nowhere near it.
+
+**The invariants.** `crc_ref` and `acc` pass the oracle in all three builds. These are new expansion
+paths in a one-release-old pass, so passing is a real check, not a formality.
+
+**What would change my mind:**
+- C keeps the table, or lands near A (above 400,000). That would mean the Zbc path reflects the
+  data after all, or is not taken, and my recollection of the expander is wrong.
+- B has no table. That would mean the Zbkb path is not table-based.
+- D differs from C by more than 15,000. That would mean the extensions interact in a way I did not
+  model.
+- Any build beats the stated table by more than 5%.
+- Any oracle failure. That would be a miscompile in a new expansion path, and the most interesting
+  outcome available.
+<!-- sealed text ends -->
 
 ## What would change my mind
 
