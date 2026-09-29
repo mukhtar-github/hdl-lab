@@ -9,7 +9,7 @@ stale. A new session checks it against the live state before acting on it.
 ---
 
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
-for both rounds of amendments to `0009` and `0010`.*
+for both rounds of amendments to `0009` and `0010`, and on 2026-09-29 for `0011`.*
 
 ## hdl-lab handoff (2026-09-28)
 
@@ -64,11 +64,13 @@ stale the same day.)
   unchanged: 138,137 instret, image `1baf3e07…`.
 
 **Next, in order**
-1. **The reference decoder:** Phase 0's critical path now. Decide these before writing any of it:
-   - what it does after a fault, and so where it looks for the next frame (SPEC does not fix this);
-   - its output fields and units;
-   - how `stimulus.bin` reaches it under Spike;
-   - whether a GT06 length fault can reach variant dispatch (PROTOCOL-EVIDENCE Finding 7).
+1. **The reference decoder:** Phase 0's critical path now.
+   - **Settled by `0011`:** what it does after a broken frame. A broken frame costs only its own
+     bytes, and a GT06 length fault cannot reach variant dispatch (Findings 7 and 8).
+   - **Still to decide before writing any of it:**
+     - its output fields and units;
+     - how `stimulus.bin` reaches it under Spike, including how it learns each connection's
+       protocol (`0011` assumes it knows).
 
    Before freezing, measure simulated cycles per second on a proxy of about the planned core's
    size, for example an open-source RV32 core under Icarus. Convert with the planned core's cycles
@@ -87,7 +89,7 @@ stale the same day.)
    sets one.
 
 **Where things are**
-- **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0010`.
+- **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0011`.
 - **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
   whose `intent.jsonl` is the decoder's ground truth, not its expected output.
 - **What happened and what is unresolved:** `docs/journal/2026-09.md`, latest entries at the bottom.

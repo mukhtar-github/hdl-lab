@@ -33,8 +33,9 @@ A stimulus is versioned as generator + parameters + seed, and never committed (S
 
 **`intent.jsonl` is not the expected output.** It records what was generated. What a decoder
 should *print* for a truncated frame, or for the frame after one, depends on how it resynchronises,
-and that is the reference decoder's design. In `0004`'s chain the reference decoder produces the
-expected output. The intent log is what that output will be checked against.
+and that is the reference decoder's design, fixed by `decisions/0011`. In `0004`'s chain the
+reference decoder produces the expected output. The intent log is what that output will be checked
+against.
 
 ## Every parameter is an assumption
 

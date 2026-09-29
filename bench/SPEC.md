@@ -3,6 +3,8 @@
 - **Version:** draft 1 — **frozen before the reference decoder is written**, per `decisions/0004`
 - **Amended 2026-09-27:** see *Amendment* at the end. Writing the stimulus generator found
   unset parameters that the list below does not name. Nothing already here changes.
+- **Amended 2026-09-28 and 2026-09-29:** see the amendments at the end. §7's frame count is also
+  sized for RTL simulation. §5 records Traccar's scans, and the decoder's rule is `decisions/0011`.
 - **Date:** 2026-09-21
 - **Classification:** specification-derived reconstruction (`bench/README.md` rule 3)
 
@@ -237,3 +239,23 @@ Two facts found while laying out the frames bear on §4. They are recorded in
 §7 says the frame count must be "small enough to run under Spike in reasonable time". `decisions/0010`,
 as amended, adds RTL simulation. The frozen configurations include one small enough to run on the
 core in RTL simulation in Phase 4, sized from a measured throughput.
+
+# Amendment — 2026-09-29: §5 records Traccar's scans; the benchmark decoder's rule is `0011`
+
+§5's two scans are Traccar's, and they are verified as Traccar's. They are not a rule for the
+benchmark decoder. `decisions/0011` sets that rule.
+
+- **JT808:** the decoder keeps the three-way scan.
+- **GT06:** the decoder searches for the start bits `78 78`. Traccar realigns on the next `0D 0A`,
+  and so loses the frame that follows garbage (`PROTOCOL-EVIDENCE` Finding 8).
+- **After a broken frame:** the decoder looks again from the frame's second byte, so a broken frame
+  costs only its own bytes.
+
+Two consequences for this specification:
+
+- **§5's resync rate is not the garbage rate alone.** Every candidate that fails framing is scanned
+  a second time, so faults make resync work too. A sweep over resync rate must hold §4's fault rates
+  fixed, or report them beside it.
+- **§4's length-field disagreement never becomes a frame.** Its bytes are reported in a `resync`
+  record, like a truncated frame's, so §3's `malformed` status is not produced by any fault the
+  generator makes today.

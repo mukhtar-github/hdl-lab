@@ -7,6 +7,7 @@ are from that commit. Nothing here is from vendor marketing, forum summaries or 
 
 Findings 4 and 5 also read the GT06 vendor document, v1.8.1, pinned by SHA-256 in the same README.
 Every number in Findings 4 to 6 comes from one capture of `bench/evidence/checksums.py`.
+Finding 8's come from one capture of `bench/evidence/framing.py`.
 
 **Why this file exists.** The benchmark's shape depends on claims about how much these protocols
 actually vary. Those claims circulate mostly in domain material of poor provenance. This file
@@ -271,6 +272,101 @@ So `STANDARD` means "a length that no variant rule claims". The vendor's layouts
 reads `0x21` instead of `0x1f` is decoded as `BENWAY`. So in Traccar, SPEC §4's length-disagreement
 class and §1's variant dispatch are not independent. Whether they are independent in the benchmark
 decoder is a property of its design, and must be stated when it is written.
+
+---
+
+## Finding 8 — after a broken frame, Traccar's framers lose whole frames
+
+Capture: [`20260928T061100Z-traccar-framing`](../docs/results/20260928T061100Z-traccar-framing/).
+
+`bench/evidence/framing.py` ports both frame decoders line for line, framing only. The port
+reproduces all 12 vectors in Traccar's own framer tests, and three deliberately broken ports each
+fail at least one (section 1). Sections 2 and 3 run broken frames through it, with frames made by
+`bench/stimulus`'s encoders.
+
+Neither framer checks a checksum, and neither protocol decoder does (Finding 4). The question here
+is only where each framer starts looking for the next frame once one is broken.
+
+### JT808: one missing delimiter re-pairs every boundary after it
+
+`Jt808FrameDecoder.java:35-41` skips bytes until `(`, `7E` or `E7`. `:61` ends the frame at the next
+byte equal to the one that opened it. On the wire, frames sit as `7E … 7E 7E … 7E`, each closing
+delimiter followed by the next frame's opening one.
+
+A truncated frame has lost its closing delimiter, so the framer ends it at the next frame's
+**opening** delimiter. It then skips the next frame's bytes as though they were garbage, as far as
+that frame's closing delimiter. It returns that closing delimiter and the opening one after it,
+`7E 7E`, as a frame. Every boundary after the truncation is now paired wrongly.
+
+| Section 2, both `7E` and `E7` | Whole frames lost |
+|---|---|
+| a frame truncated to half, then 6 whole | all 6 |
+| a frame that lost only its closing delimiter, then 6 whole | all 6. The truncated frame itself comes out as if whole |
+| truncated, 2 whole, truncated, 3 whole | the first 2. The second missing delimiter restores the pairing |
+| a whole frame, 6 garbage bytes (`no_sync`), 6 whole | none. The skip handles garbage |
+
+Nothing restores the pairing by design:
+
+- **A second missing delimiter restores it,** in section 2. In section 3 it did so on connection 8
+  and not on connection 6, where stray bytes had moved the framer in between.
+- **Chance restores it, or makes it worse.** Neither escape alphabet escapes `(`, and each leaves
+  the other mode's delimiter alone, so those bytes can sit raw inside a frame body. Once the framer is
+  misaligned, it takes such a byte as a frame start. Sometimes that frame ends on a real boundary,
+  as on connections 4 and 5 in section 3. Sometimes nothing ends it, and the framer holds every
+  later byte of the connection, waiting (section 2, "left waiting").
+
+### GT06: nothing looks for a frame start
+
+`Gt06FrameDecoder.java:34-58` takes the frame to start at whatever byte comes next. It reads a
+length there (`:40-44`). It returns the frame if `0D 0A` sits where that length points (`:46-47`),
+and otherwise ends it at the first `0D 0A` it finds (`:50-56`). No loop skips to `78 78`.
+
+| Section 2: after G1 comes | What the framer returns next | Whole frames lost |
+|---|---|---|
+| 6 garbage bytes (`no_sync`) | the garbage and G2, as one frame ending at G2's `0D 0A` | G2 |
+| nothing: G1 is truncated | G1's fragment and G2, as one frame | G2 |
+| nothing: G1's length field is 2 too long, its CRC recomputed | G1, whole, from the search for `0D 0A` | none |
+| nothing: G1's CRC is wrong | G1, whole | none |
+
+The resynchronisation SPEC §5 records, "GT06 scans for `0x0D 0x0A`", is this search. It realigns at
+the end of the frame that follows the garbage, and that frame is lost.
+
+The third row answers part of Finding 7's question for Traccar. A frame whose length disagrees
+reaches `Gt06ProtocolDecoder` whole, and `decodeVariant()` reads the wrong length.
+
+### `(` sentences: a length that is an index
+
+`Jt808FrameDecoder.java:53` returns `buf.readRetainedSlice(index + 1)`. `index` comes from
+`indexOf` at `:51`, so it is a position in the buffer, but the argument is a length. The two agree
+only when the sentence starts at position 0. When a sentence follows another frame in the same
+buffer, the slice is too long by the sentence's offset. It takes bytes of the frames after it or,
+near the end of the buffer, throws (section 2).
+
+Traccar's tests cannot see it. Every vector in both framer tests sits alone at the start of its own
+buffer, and a port with the length corrected passes them too (section 1). Whether the offset is
+ever non-zero in production depends on how Netty accumulates reads, and Netty is not pinned here.
+**This is read from code and run in a port. It has not been observed in Traccar.** Section 3
+corrects the length, so that its counts measure only the delimiter pairing.
+
+### In the benchmark's own stimulus
+
+Section 3 runs the coverage stimulus through the port. **12 of 90** whole GT06 frames and **37 of
+108** whole JT808 frames do not come out whole. **These are not rates.** `coverage.json` sets every
+fault rate so that each class occurs. The capture's per-connection map shows the shape better
+than the totals:
+
+- each GT06 garbage run or truncation costs exactly the next frame;
+- a JT808 truncation costs a run of frames, which ends at another truncation, by chance, or with
+  the connection.
+
+**What this establishes.** Traccar's framing loses whole frames after a broken one. On JT808 the
+loss is not local. It lasts until something re-pairs the delimiters, so its size depends on how
+many frames the connection carries after the fault. Traccar's own tests would not show any of it.
+
+**What it does not establish.**
+- **How often** a broken frame is followed by more frames on the same connection, in real traffic.
+- **What Traccar does beyond framing.** Exceptions and connection handling are in code not pinned
+  here.
 
 ---
 
