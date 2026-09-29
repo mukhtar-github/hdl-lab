@@ -5,9 +5,9 @@ Everything here was read out of Traccar's source at pinned commit
 are from that commit. Nothing here is from vendor marketing, forum summaries or explainers — per
 `docs/decisions/0006`, specifications and implementations only.
 
-Findings 4 and 5 also read the GT06 vendor document, v1.8.1, pinned by SHA-256 in the same README.
-Every number in Findings 4 to 6 comes from one capture of `bench/evidence/checksums.py`.
-Finding 8's come from one capture of `bench/evidence/framing.py`.
+Findings 4, 5 and 9 also read the GT06 vendor document, v1.8.1, pinned by SHA-256 in the same
+README. Every number in Findings 4 to 6, and Finding 9's two CRCs, come from one capture of
+`bench/evidence/checksums.py`. Finding 8's come from one capture of `bench/evidence/framing.py`.
 
 **Why this file exists.** The benchmark's shape depends on claims about how much these protocols
 actually vary. Those claims circulate mostly in domain material of poor provenance. This file
@@ -367,6 +367,96 @@ many frames the connection carries after the fault. Traccar's own tests would no
 - **How often** a broken frame is followed by more frames on the same connection, in real traffic.
 - **What Traccar does beyond framing.** Exceptions and connection handling are in code not pinned
   here.
+
+---
+
+## Finding 9 — what Traccar makes of a location, and what it sends back
+
+Read from code at the pinned commit, including six helper files pinned on 2026-09-29
+(`reference/README.md`). The only numbers are the CRCs of the GT06 document's two response
+examples, from [`20260927T062216Z-protocol-checksums`](../docs/results/20260927T062216Z-protocol-checksums/),
+section 1.
+
+### One record type, in units that are not exact
+
+Traccar decodes every location into one `Position`: degrees, knots, and a UTC instant.
+
+| Frame | Coordinate | Speed | Lines |
+|---|---|---|---|
+| GT06 `0x12` | u32 / 60 / 30000 | km/h, converted to knots | `Gt06ProtocolDecoder.java:318-319`, `:326` |
+| JT808 `0x0200` | u32 / 1,000,000 | tenths of km/h, converted to knots | `Jt808ProtocolDecoder.java:725-726`, `:761` |
+| JT808 `0x5501` | BCD degrees, plus minutes / 60 | BCD, stored unconverted, so read as knots | `Jt600ProtocolDecoder.java:50-54`, `:106-107`, `:114` |
+
+- Every conversion is in `double`.
+- **The knots are not exact.** `knotsFromKph` multiplies by 0.539957 (`UnitsConverter.java:20`,
+  `:31-33`). A knot is exactly 1.852 km/h, and 1/1.852 is 0.5399568…, so the constant is rounded to
+  six places.
+
+### Three time zones, all defaults
+
+- **GT06: UTC.** The document gives no zone for Date Time (§5.2.1.4). Traccar's login stores the
+  device's configured zone, which is null when none is configured, and `DeviceSession.set` removes a
+  key whose value is null (`DeviceSession.java:93-99`). The next frame then finds no zone and sets
+  the default, UTC (`Gt06ProtocolDecoder.java:507-509`, `BaseProtocolDecoder.java:158-160`). A login
+  can carry a zone of its own in an extension (`:527-539`); the benchmark's logins carry none.
+- **JT808 `0x0200`: GMT+8** (`Jt808ProtocolDecoder.java:384-386`).
+- **JT808 `0x5501`: UTC,** through `new DateBuilder()` (`Jt600ProtocolDecoder.java:97`,
+  `DateBuilder.java:26-28`).
+
+So by default, one JT808 device's `0x0200` times and `0x5501` times are read eight hours apart.
+Nothing pinned says which reading is right.
+
+A two-digit year is 2000 + YY (`DateBuilder.java:44-48`). `DateBuilder` never makes its calendar
+strict, and a `java.util.Calendar` is lenient unless it is told otherwise (Java SE API, not a pinned
+source). So an impossible date, such as month 13, becomes a different, real one.
+
+### Range checks: coordinates only
+
+- `Position.setLatitude` and `setLongitude` throw beyond ±90° and ±180° (`Position.java:237-255`). The
+  exception ends the decode, and the frame produces no position.
+- `BcdUtil.readInteger` takes a nibble above 9 as the value 10 to 15 (`BcdUtil.java:24-33`).
+- Nothing else is range-checked.
+
+### What each side sends back
+
+| Frame | GT06 document | Traccar |
+|---|---|---|
+| GT06 `0x01` login | a response, §5.1.2 | a response, `Gt06ProtocolDecoder.java:542` |
+| GT06 `0x12` location | none defined | a response, `:1630` |
+| GT06 `0x13` heartbeat | a response, §5.4.2 | a response, `:1630` |
+| an unknown GT06 type | none defined | a response, unless extended or a command type, `:1618-1626` |
+| JT808 `0x0102`, `0x0200`, `0x0704` | — | general response `0x8001`, `Jt808ProtocolDecoder.java:445-448`, `:468-470`, `:502-504` |
+| JT808 `0x5501` | — | `0x4401`, only when attribute bit 15 is set, `:482-485` |
+| a `(…BASE,2…)` sentence | — | the sentence, with `TIME` replaced by the server's clock, `:347-353` |
+| an unknown JT808 type | — | none |
+
+- **The document's two response examples verify:** login, §5.1.3 (p.12), and heartbeat, §5.4.3
+  (p.26), in the capture's section 1. Its heartbeat *request* example does not (Finding 5).
+- **Traccar acknowledges frames whose check fails,** in both protocols, because it checks none
+  (Finding 4).
+- **The order differs by protocol.** JT808 answers before it decodes the body: `:470` precedes
+  `decodeLocation` at `:472`. GT06 answers after, at `:1630`. So a GT06 frame whose coordinates throw
+  gets no response, and a JT808 one already has one.
+- **The JT808 response** (`formatMessage`, `:126-148`; `sendGeneralResponse`, `:151-161`) has:
+  - the received delimiter;
+  - type `0x8001`;
+  - attribute 5, the body's length, with bit 14 set if the received frame had a version byte;
+  - that version byte;
+  - the received terminal ID;
+  - index 0 (`:139-143`);
+  - a body of the received index, the received type, and result 0 (`RESULT_SUCCESS`, `:109`);
+  - the XOR of everything from the type to the end of the body;
+  - the delimiter.
+- **The response is escaped on the way out,** by `Jt808FrameEncoder` (`:25-49`), in the alphabet that
+  its first byte selects. The `E7` alphabet escapes `E6`, `E7`, `3E`, and also `3D`, as `3E 02`
+  (`:33-35`). Decoding never needs that last one, because a raw `3D` decodes as itself. This is the
+  only place in a pinned source that escapes it, and it is the source `bench/stimulus` rule R9 did
+  not have.
+
+**Why it matters here.** The reference decoder's records need units, a time zone for every time,
+and a rule for which frames it answers. `decisions/0012` takes them from here. Where the GT06
+document speaks, it follows the document: it answers only login and heartbeat, and only frames that
+pass their check. For JT808 it follows Traccar, because no standard is pinned.
 
 ---
 
