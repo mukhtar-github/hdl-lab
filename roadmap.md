@@ -1,6 +1,7 @@
 # RISC-V Project Roadmap
 
-*Revised endpoint: a general-purpose core with a domain-specific extension, quantified.*
+*Revised endpoint: a general-purpose core with the specialisation its workload justifies,
+quantified.*
 
 > **Status: canonical.** Adopted 2026-09-12. This is the version the project is built against.
 > Supersedes all earlier drafts. Changes to it are decision records in `docs/decisions/`, not
@@ -31,12 +32,16 @@ learning projects die of exactly this.
 
 The revised endpoint is:
 
-> **I profiled a real workload, designed a custom extension to accelerate its hot path,
-> integrated it into a pipelined RV32IM core I built, and measured what it cost in area and
+> **I profiled a real workload, used the measurements to choose what would accelerate its hot
+> path, integrated it into a pipelined RV32IM core I built, and measured what it cost in area and
 > clock frequency to get the speedup I got.**
 
 That is the actual job description of a computer architect. It also has a natural terminus:
 the workload defines when you are done.
+
+Phase 4 decides the mechanism. It can be a ratified extension, a custom extension, or another
+kind of hardware, such as a wider load path. Rule 3 of the standard/custom boundary decides
+between the first two, and any of the three completes the project (`decisions/0013`).
 
 One honest caveat. The market observation that RISC-V wins in domain-specific silicon does
 **not** mean you can compete there. Tenstorrent and Axelera have hundreds of engineers and
