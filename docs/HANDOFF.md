@@ -9,14 +9,16 @@ stale. A new session checks it against the live state before acting on it.
 ---
 
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
-for both rounds of amendments to `0009` and `0010`, and on 2026-09-29 for `0011` and `0012`.*
+for both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
+2026-09-30 for `experiments/0002`'s result.*
 
 ## hdl-lab handoff (2026-09-28)
 
-**State:** `main` was at `34e94c6` when this was written, and at `257d20f` when it was last updated,
-with PRs #8–#23 all merged and `0012` in review. **Phase 0 is open again**, for the benchmark
-(`decisions/0010`). Phase 1's gate is passed. The only pushed tag is `v0.1-alu-golden-model-passing`.
-The tag `sealed/0002-claude-prediction` is local only, as it must be.
+**State:** `main` was at `34e94c6` when this was written, and at `92b3c59` when it was last updated,
+with PRs #8–#24 all merged and `experiments/0002`'s result in review. **Phase 0 is open again**,
+for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag is
+`v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still local only. It has
+been opened, and its text is in `experiments/0002`, so the tag is redundant now.
 
 **If you are a second assistant reading this:** it replaces any other handoff. Where anything
 disagrees with `roadmap.md` or a decision record, those win. **Freshness is by commit, not by
@@ -63,6 +65,12 @@ stale the same day.)
 - The rv32 README, `htif.h` and Makefile no longer say "the core will have no OS". The reference is
   unchanged: 138,137 instret, image `1baf3e07…`.
 
+**Done on 2026-09-29 to 30**
+- **`experiments/0002`, answered** (in review). On instruction count, neither Zbkb nor Zbc beats the
+  stated table: B retires 292,293, C 150,155 and D 148,155, against 138,137. GCC 16.2.0's
+  expansions carry dead instructions, 6 per byte with Zbkb and 2 with Zbc. Both hypotheses got the
+  mechanism right, and both missed B's count.
+
 **Next, in order**
 1. **The reference decoder:** Phase 0's critical path now.
    - **Settled by `0011`:** what it does after a broken frame. A broken frame costs only its own
@@ -78,18 +86,22 @@ stale the same day.)
    Before freezing, measure simulated cycles per second on a proxy of about the planned core's
    size, for example an open-source RV32 core under Icarus. Convert with the planned core's cycles
    per instruction, and size a small configuration from that (`0010`, amended twice).
-2. **`experiments/0002`.** Unchanged. The author's hypothesis for B, C and D goes in first, then the
-   seal is opened, then the captures. No Zbkb/Zbc builds before that.
-3. **0001's status line** still says "for the author to edit". A one-line note is recommended; it is
-   the author's call.
-4. **Before any Phase 2 trap work,** pin the Privileged Architecture in `reference/` (`0009`,
+2. **Before any Phase 2 trap work,** pin the Privileged Architecture in `reference/` (`0009`,
    amended). The pin settles the rest of the Phase 2 minimum by rule, starting with the counters:
    `minstret`, its upper halves, and `mcycle`. **Before Phase 2's gate,** decide two things, both tied to the memory-interface choice:
    `fence_i` needs Zifencei and an instruction fetch that sees earlier stores; `ma_data` needs
    misaligned loads and stores in hardware.
-5. **Git identity.** git cannot derive an author from the hostname `Mac`. Commit with
-   `-c user.name="MacBook Pro" -c user.email="macbookpro@MacBooks-MacBook-Pro.local"`, or the author
-   sets one.
+
+**Waiting on the author**
+- **0001's status line** still says "for the author to edit". A one-line note is recommended; it is
+  the author's call.
+- **The roadmap's endpoint sentence** (`roadmap.md:34`) says "designed a custom extension". Rule 3
+  has the project implement a ratified extension when one covers the workload, and an outcome
+  decided that way would not satisfy the sentence. Rewording it takes a decision record. The
+  author decides whether now or at Phase 4.
+- **Git identity.** git cannot derive an author from the hostname `Mac`. Commit with
+  `-c user.name="MacBook Pro" -c user.email="macbookpro@MacBooks-MacBook-Pro.local"`, or the author
+  sets one.
 
 **Where things are**
 - **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0012`.
@@ -103,7 +115,10 @@ stale the same day.)
 - `scripts/capture.sh <label> <command…>`, run from a clean tree
 
 **Gotchas**
-- **Push a tag by name, never with `--tags`.** That would publish the sealed 0002 prediction.
+- **Push a tag by name, never with `--tags`,** so that no local-only tag is published by accident.
+- **Merge with a merge commit, never a squash.** Captures record the branch commit they ran at, such
+  as `5333c7f` for 0002's. A squash would drop that commit from `main`'s history. For the same
+  reason, never rebase or amend a branch after a capture has recorded one of its commits.
 - **A check that has never failed proves nothing.** Break it on purpose once.
 - **Homebrew:** install only with `HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1`,
   then re-check the reference image hash.
@@ -111,5 +126,6 @@ stale the same day.)
 - **Branches:** start every topic from a freshly fetched `origin/main`. The author merges within
   minutes.
 
-**Memory:** six notes load automatically in `~/hdl-lab`: the 0002 protocol, toolchain safety, the PR
-workflow, the author's profile, git identity, and this file's location.
+**Memory:** seven notes load automatically in `~/hdl-lab`: how Claude seals a prediction, toolchain
+safety, the PR workflow, the author's profile, the author's open items, git identity, and this
+file's location.
