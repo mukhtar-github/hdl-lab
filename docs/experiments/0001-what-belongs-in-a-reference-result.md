@@ -2,8 +2,8 @@
 
 - **Date opened:** 2026-09-21
 - **Phase:** 0
-- **Status:** Answered 2026-09-25 — *Result, Outcome and What this changes drafted by Claude
-  from the captures, for the author to edit. Immutable once merged.*
+- **Status:** Answered 2026-09-25. Claude drafted the Result, Outcome and What this changes from
+  the captures. On 2026-09-30 the author accepted them without changes.
 
 ## Question
 
