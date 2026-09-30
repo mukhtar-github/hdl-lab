@@ -1,7 +1,7 @@
 # 0013 — The endpoint names the mechanism that the measurements choose
 
 - **Date:** 2026-09-30
-- **Status:** Accepted
+- **Status:** Accepted, **amended on 2026-09-30**; see the amendment at the end.
 - **Phase:** all. It changes the roadmap's statement of what finishes the project.
 
 ## Context
@@ -86,3 +86,57 @@ justified, and the answer is still open.
   the core, and a memory-mapped accelerator. A ratified extension uses the first way, with the
   encodings from its specification instead of the custom opcode space.
 - **What would reopen this:** a change to rule 3, or to the roadmap's question.
+
+# Amendment 1 — 2026-09-30
+
+A second assistant reviewed this record after it merged, and Claude checked each point against the
+roadmap. The line numbers in this amendment are at `c923785`, where this record merged. The endpoint
+sentence stays as decided. The paragraph after it had three faults, and two paragraphs replace it.
+
+1. **It had no place for a measured "no".** The sentence requires integrating something. Under it,
+   only integrating some hardware completes the project. That is a reason to integrate something,
+   rather than to find that nothing is worth its area. This record had fixed the same fault for
+   custom extensions. The roadmap already allows a "no": the "Versus commodity" number exists to
+   answer the build-versus-buy question (`roadmap.md:418`). So what completes the project is now
+   separate from the verdict:
+   - Phase 5 integrates the best candidate that Phase 4 finds, and measures it.
+   - The verdict on whether it was worth its area is separate. A measured "not worth it" completes
+     the project.
+   - Before Phase 5 starts, the author states what speedup, for what area and Fmax, would make the
+     mechanism worth it. So nobody can set the bar after the numbers are known.
+   - Software changes belong to the baseline, as `0008` requires. They are not the mechanism.
+2. **"Another kind of hardware" had no limit.** A branch predictor or a cache would have qualified.
+   The endpoint was rewritten to prevent exactly that: a project that "can always add another
+   instruction, another pipeline stage, another cache level" (`roadmap.md:29-30`). **On 2026-09-30
+   the author decided that a general-purpose feature cannot complete the project.** A branch
+   predictor, a cache, deeper forwarding or another pipeline stage stays part of the core's design.
+   It is chosen for timing, area and hazards, as `0009` §3 chooses the stage where branches resolve.
+3. **"Its hot path" assumed that there is one.** Prediction B says the winner "depends on the
+   protocol mix" (`roadmap.md:118`), and Prediction C expects a phase diagram (`roadmap.md:140`).
+   So Phase 4 can choose a set of mechanisms. The project is complete when Phase 5 has measured
+   that set, for the configurations frozen under `0010`. Work beyond it is new work, with a record
+   of its own.
+
+The two paragraphs that replace the old one (`roadmap.md:42-44`):
+
+> Phase 4 decides the mechanism, or a set of mechanisms, for the configurations frozen in Phase 0.
+> It can be a ratified extension, a custom extension, or other hardware aimed at this workload, such
+> as a wider load path. A general-purpose feature does not count: a branch predictor, a cache,
+> deeper forwarding or another pipeline stage is part of the core's design. Software changes do not
+> count either, because they belong to the baseline. Rule 3 of the standard/custom boundary decides
+> between the two kinds of extension.
+>
+> Before Phase 5 starts, state what speedup, for what area and Fmax, would make the mechanism worth
+> it. Phase 5 then integrates the best candidate and measures it. The verdict compares those numbers
+> with the stated bar and with the commodity part. A measured "not worth it" completes the project
+> as fully as a "worth it" (`decisions/0013`).
+
+**A consequence for area.** A ratified extension is implemented whole. So rule 3 prefers the
+smallest ratified extension that holds what the workload needs. For example, the Zbc loop in
+`0002` uses only `clmul` and `clmulh`, and Zbkc holds those two without Zbc's `clmulr`. The area
+number covers the whole extension as implemented. The used subset can be reported beside it,
+labelled. The facts about Zbkc and about whole extensions come from the ratified specifications,
+which are not pinned in `reference/`.
+
+**Not adopted:** the review's claim that a measured "no" is "the likely case". The only
+measurement so far is `0002`: one kernel, counted in instructions on Spike.

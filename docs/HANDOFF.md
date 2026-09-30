@@ -10,19 +10,20 @@ stale. A new session checks it against the live state before acting on it.
 
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
 for both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
-2026-09-30 for `experiments/0002`'s result and for the author's answers, `0013` among them.*
+2026-09-30 for `experiments/0002`'s result and for the author's answers, `0013` and its amendment
+among them.*
 
 ## hdl-lab handoff (2026-09-28)
 
-**State:** `main` was at `34e94c6` when this was written, and at `10c8eec` when it was last updated,
-with PRs #8–#25 all merged and `0013` in review. **Phase 0 is open again**,
+**State:** `main` was at `34e94c6` when this was written, and at `c923785` when it was last updated,
+with PRs #8–#26 all merged and an amendment to `0013` in review. **Phase 0 is open again**,
 for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag is
 `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still local only. It has
 been opened, and its text is in `experiments/0002`, so the tag is redundant now.
 
 **If you are a second assistant reading this:** it replaces any other handoff. Where anything
 disagrees with `roadmap.md` or a decision record, those win. **Freshness is by commit, not by
-length.** `roadmap.md` was last changed in `2ac842d`; `git log -1 --format=%h -- roadmap.md` prints
+length.** `roadmap.md` was last changed in `35b17f5`; `git log -1 --format=%h -- roadmap.md` prints
 the current one. A copy from before it is out of date. (This note once gave a line count, and it was
 stale the same day.)
 
@@ -73,9 +74,11 @@ stale the same day.)
 - **The author's answers, 2026-09-30.**
   - **0001's status line.** The author accepted the write-up without changes, and the status line
     now says so.
-  - **`0013`, the endpoint** (in review). The endpoint sentence no longer requires a custom
-    extension. It names the mechanism that Phase 4 chooses: a ratified extension, a custom
-    extension, or another kind of hardware.
+  - **`0013`, the endpoint** (#26), with an amendment after review (in review). The endpoint
+    sentence no longer requires a custom extension. Phase 4 chooses the mechanism: a ratified
+    extension, a custom extension, or other hardware aimed at this workload, but never a
+    general-purpose feature. A measured "not worth it" completes the project. The bar for
+    "worth it" is stated before Phase 5 starts.
   - **A git identity for this repository,** in `.git/config`: `Mukhtartg`, the identity of the
     author's GitHub account and of every merge commit. `.git/config` is not in the repository, so
     a new clone needs it set again. Earlier local commits are authored `MacBook Pro`, a name that
