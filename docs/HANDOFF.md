@@ -108,6 +108,8 @@ stale the same day.)
 - **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
   whose `intent.jsonl` is the decoder's ground truth, not its expected output.
 - **What happened and what is unresolved:** `docs/journal/2026-09.md`, latest entries at the bottom.
+- **How to write:** the author's guide, `~/epoynt/docs/platform/writing-style.md`, outside this repo.
+  From 2026-09-30 it governs every document, commit message, PR body and reply.
 
 **Commands**
 - `make -C bench/rv32 check`, `make -C bench/stimulus`, `make -C bench/stimulus test`
@@ -126,6 +128,6 @@ stale the same day.)
 - **Branches:** start every topic from a freshly fetched `origin/main`. The author merges within
   minutes.
 
-**Memory:** seven notes load automatically in `~/hdl-lab`: how Claude seals a prediction, toolchain
-safety, the PR workflow, the author's profile, the author's open items, git identity, and this
-file's location.
+**Memory:** eight notes load automatically in `~/hdl-lab`: how Claude seals a prediction, toolchain
+safety, the PR workflow, the author's profile, the author's open items, the author's writing guide,
+git identity, and this file's location.
