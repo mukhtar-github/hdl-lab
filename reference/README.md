@@ -148,16 +148,25 @@ environment to run unmodified. Its line citations are to these files.
 | `isa/rv64ui/ma_data.S`, `isa/rv64ui/fence_i.S` | The two `rv32ui` tests that reach beyond RV32I. The `rv32ui` versions include these. |
 | `isa/rv64mi/illegal.S`, `isa/rv64si/csr.S` | What `rv32mi` expects of the illegal-instruction trap. `rv32mi`'s `csr` test is `rv64si/csr.S` built for machine mode. |
 
+Added 2026-09-30, from the same commit, for `docs/decisions/0014`:
+
+| File | Why it is here |
+|---|---|
+| `benchmarks/common/syscalls.c` | How riscv-tests' own benchmarks print: `SYS_write` through Spike's syscall proxy (`:20-36`), one character per call (`:79-84`). They print their counters after `main` returns (`:116-124`). |
+| `benchmarks/median/median_main.c` | Where a benchmark's measured region sits: between `setStats(1)` and `setStats(0)`, with the check after it (`:34-39`). Its input is compiled in (`:19`), which `bench/README` forbids here. |
+
 ```bash
 T=https://raw.githubusercontent.com/riscv-software-src/riscv-tests/bcffa2b3188b040c611f90dc0b6e422f54775a09
 E=https://raw.githubusercontent.com/riscv/riscv-test-env/6de71edb142be36319e380ce782c3d1830c65d68
 mkdir -p reference/riscv-tests/env/p reference/riscv-tests/isa/rv32ui \
          reference/riscv-tests/isa/rv32mi reference/riscv-tests/isa/rv64ui \
-         reference/riscv-tests/isa/rv64mi reference/riscv-tests/isa/rv64si
+         reference/riscv-tests/isa/rv64mi reference/riscv-tests/isa/rv64si \
+         reference/riscv-tests/benchmarks/common reference/riscv-tests/benchmarks/median
 curl -sSfL -o reference/riscv-tests/env/p/riscv_test.h "$E/p/riscv_test.h"
 curl -sSfL -o reference/riscv-tests/env/p/link.ld "$E/p/link.ld"
 for p in isa/rv32ui/Makefrag isa/rv32mi/Makefrag isa/rv64ui/ma_data.S isa/rv64ui/fence_i.S \
-         isa/rv64mi/illegal.S isa/rv64si/csr.S; do
+         isa/rv64mi/illegal.S isa/rv64si/csr.S \
+         benchmarks/common/syscalls.c benchmarks/median/median_main.c; do
     curl -sSfL -o "reference/riscv-tests/$p" "$T/$p"
 done
 ```
@@ -180,10 +189,23 @@ core will run in lockstep with (rung 4), until the Privileged Architecture itsel
 | `riscv/processor.cc` | A missing CSR traps on any access; which CSRs exist, including the four ID registers |
 | `riscv/insns/csrrs.h`, `csrrsi.h`, `csrrw.h` | What counts as a write: `csrrs` and `csrrsi` only when `rs1` is non-zero, `csrrw` always |
 
+Added 2026-09-30, from the same commit, for `docs/decisions/0014`: how a program gets its input into
+Spike, and how its output gets out.
+
+| File | Why it is here |
+|---|---|
+| `riscv/sim.h`, `riscv/sim.cc` | The host side runs once every `INTERLEAVE` = 5,000 instructions (`sim.h:104`, `sim.cc:202-219`). A program that waits on `tohost` spins until then. |
+| `fesvr/htif.cc`, `fesvr/htif.h` | The host's loop over `tohost` (`htif.cc:219-235`), extra ELF payloads (`:143-147`), the signature dump (`:171-191`), and the `+` options (`htif.h:118-154`) |
+| `fesvr/syscall.cc` | The syscall proxy: eight 64-bit words at the address in `tohost` (`:448-460`), and `SYS_write` (`:240-246`) |
+| `fesvr/device.cc`, `fesvr/term.cc` | The console device writes one character per command (`device.cc:70-73`), straight to file descriptor 1 (`term.cc:49-53`) |
+| `spike_main/spike.cc` | `--kernel` and `--initrd`: where each puts a file in memory (`:388-412`) |
+
 ```bash
 B=https://raw.githubusercontent.com/riscv-software-src/riscv-isa-sim/530af85d83781a3dae31a4ace84a573ec255fefa
-mkdir -p reference/spike/riscv/insns
-for p in riscv/csrs.cc riscv/processor.cc riscv/insns/csrrs.h riscv/insns/csrrsi.h riscv/insns/csrrw.h; do
+mkdir -p reference/spike/riscv/insns reference/spike/fesvr reference/spike/spike_main
+for p in riscv/csrs.cc riscv/processor.cc riscv/insns/csrrs.h riscv/insns/csrrsi.h riscv/insns/csrrw.h \
+         riscv/sim.h riscv/sim.cc fesvr/htif.cc fesvr/htif.h fesvr/syscall.cc fesvr/device.cc \
+         fesvr/term.cc spike_main/spike.cc; do
     curl -sSfL -o "reference/spike/$p" "$B/$p"
 done
 ```

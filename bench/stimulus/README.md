@@ -124,8 +124,13 @@ header   "TFDS" | u16 format version (1) | u16 header bytes (20)
 chunk    u16 length | u16 connection | length bytes | zeros to a multiple of 4
 ```
 
-It is meant to reach the decoder as data the compiler cannot see: loaded or linked as a binary
-object, never compiled in as a C array (`bench/README`).
+It reaches the decoder as data the compiler cannot see. It is linked into the decoder's image in a
+section of its own, never compiled in as a C array (`bench/README`, `decisions/0014`).
+
+**Version 2 is decided, and not yet written.** `decisions/0014` adds a table between the header and
+the first chunk: one byte for each connection, 1 for GT06 and 2 for JT808. The decoder needs it to
+know each connection's protocol before the connection's first byte (`decisions/0011`). Until the
+generator writes version 2, the layout above is version 1.
 
 ## Checking
 

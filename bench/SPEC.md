@@ -6,6 +6,8 @@
 - **Amended 2026-09-28 and 2026-09-29:** see the amendments at the end. §7's frame count is also
   sized for RTL simulation. §5 records Traccar's scans, and the decoder's rule is `decisions/0011`.
   §3's records get their fields, units, responses and order from `decisions/0012`.
+- **Amended 2026-09-30:** §3's input carries each connection's protocol. `decisions/0014` fixes how
+  the stimulus reaches the decoder, what the window counts, and how the records leave Spike.
 - **Date:** 2026-09-21
 - **Classification:** specification-derived reconstruction (`bench/README.md` rule 3)
 
@@ -384,3 +386,26 @@ Only a frame whose status is `ok`, and whose connection has a device, gets a res
 - **Traccar's other responses:** to a GT06 `0x12` or an unknown GT06 type, which the document gives
   none for; to a frame that fails its check, or is malformed; to a `0x5501` with attribute bit 15;
   and to a `BASE,2` sentence, which carries Traccar's wall clock.
+
+# Amendment — 2026-09-30: §3's input carries each connection's protocol; the harness is `decisions/0014`
+
+§3's input stands. `decisions/0014` adds one fact to it, and fixes the harness around the decoder.
+
+**Input.** `stimulus.bin` version 2 has a table between its header and its first chunk: one byte for
+each connection, 1 for GT06 and 2 for JT808. The table stands in for the port that each connection
+arrived on. Like the connection id, it is transport metadata. The decoder chooses a connection's
+framing from it, and may not parse a protocol out of the payload. The layout is in `0014`,
+section 2.
+
+**The window.** The harness counts retired instructions in 64 bits, over these and nothing else:
+- the walk over the chunks, and each chunk's dispatch to its connection's protocol;
+- everything that `0011` and `0012` require of the decoder;
+- the stores that append each record's value to a buffer;
+- the end of the input, which ends every connection's stream (`0011` rule 7).
+
+The check of the file and the setup of each connection come before the window. Sorting, formatting
+and printing come after it.
+
+**Output.** The records print after the window, in canonical order, through Spike's syscall proxy,
+one buffer at a time. The last line repeats the number of records. The stimulus is linked into the
+decoder's image as data, never compiled in (`bench/README.md`).
