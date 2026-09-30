@@ -10,13 +10,13 @@ stale. A new session checks it against the live state before acting on it.
 
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
 for both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
-2026-09-30 for `experiments/0002`'s result and for the author's answers, `0013` and its amendment
-among them.*
+2026-09-30 for `experiments/0002`'s result, for the author's answers with `0013` among them, and
+for the pinned RISC-V manuals.*
 
 ## hdl-lab handoff (2026-09-28)
 
-**State:** `main` was at `34e94c6` when this was written, and at `c923785` when it was last updated,
-with PRs #8–#26 all merged and an amendment to `0013` in review. **Phase 0 is open again**,
+**State:** `main` was at `34e94c6` when this was written, and at `6e3f63a` when it was last updated,
+with PRs #8–#27 all merged and the pinned RISC-V manuals in review. **Phase 0 is open again**,
 for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag is
 `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still local only. It has
 been opened, and its text is in `experiments/0002`, so the tag is redundant now.
@@ -33,7 +33,7 @@ stale the same day.)
 |---|---|---|
 | 0 | 1. Find a deliberately introduced bug by reading a waveform. 2. The benchmark runs on Spike, is checked against the generator's intent, is captured at every declared configuration, and is frozen and tagged (`0010`) | 1 passed 2026-09-21 (#1). **2 open.** It closes with the tag `v0.0-benchmark-frozen` |
 | 1 | The ALU passes randomised testing against a golden model | Passed 2026-09-21 (#2), tagged `v0.1-alu-golden-model-passing`. The register file and memories are still to build, with no gate of their own |
-| 2 | `rv32ui-p-*` passes through riscv-tests' standard environment, unmodified: its `riscv_test.h` and `link.ld`, so memory sits at `0x80000000`. That needs the trap minimum (`0009`, amended) | Not started. **The core runs no program until Phase 0 closes** (`0010`). The Privileged Architecture is pinned before any trap work |
+| 2 | `rv32ui-p-*` passes through riscv-tests' standard environment, unmodified: its `riscv_test.h` and `link.ld`, so memory sits at `0x80000000`. That needs the trap minimum (`0009`, amended) | Not started. **The core runs no program until Phase 0 closes** (`0010`). The Privileged Architecture is pinned at 20250508, and `0009`'s rules are checked against it before any trap work |
 | 3 | riscv-tests on the pipeline (plus `rv32um`, `rv32mi`), ACT4, lockstep against Spike, and an RTOS boots | Not started. The rest of the privileged scope must be fixed before pipeline design (`0009`'s open items). Lockstep's Spike configuration and expected divergences must be declared before it starts |
 | 4 | None written: profile on the core, plus a commodity-MCU baseline, judged against Predictions A–C | — |
 | 5 | Three numbers, honestly reported: speedup, area, Fmax, plus versus commodity | — |
@@ -74,11 +74,14 @@ stale the same day.)
 - **The author's answers, 2026-09-30.**
   - **0001's status line.** The author accepted the write-up without changes, and the status line
     now says so.
-  - **`0013`, the endpoint** (#26), with an amendment after review (in review). The endpoint
+  - **`0013`, the endpoint** (#26), with an amendment after review (#27). The endpoint
     sentence no longer requires a custom extension. Phase 4 chooses the mechanism: a ratified
     extension, a custom extension, or other hardware aimed at this workload, but never a
     general-purpose feature. A measured "not worth it" completes the project. The bar for
     "worth it" is stated before Phase 5 starts.
+- **The RISC-V manuals are pinned** in `reference/README.md` (in review). Volumes I and II are at
+  20250508, the newest ratified release. The author added seven PDFs, and all seven are
+  byte-identical to their publishers' releases.
   - **A git identity for this repository,** in `.git/config`: `Mukhtartg`, the identity of the
     author's GitHub account and of every merge commit. `.git/config` is not in the repository, so
     a new clone needs it set again. Earlier local commits are authored `MacBook Pro`, a name that
@@ -99,9 +102,10 @@ stale the same day.)
    Before freezing, measure simulated cycles per second on a proxy of about the planned core's
    size, for example an open-source RV32 core under Icarus. Convert with the planned core's cycles
    per instruction, and size a small configuration from that (`0010`, amended twice).
-2. **Before any Phase 2 trap work,** pin the Privileged Architecture in `reference/` (`0009`,
-   amended). The pin settles the rest of the Phase 2 minimum by rule, starting with the counters:
-   `minstret`, its upper halves, and `mcycle`. **Before Phase 2's gate,** decide two things, both tied to the memory-interface choice:
+2. **Before any Phase 2 trap work,** check `0009`'s rules against the Privileged Architecture,
+   pinned at version 20250508 in `reference/`. The pinned text settles the rest of the Phase 2
+   minimum by rule, starting with the counters: `minstret`, its upper halves, and `mcycle`.
+   **Before Phase 2's gate,** decide two things, both tied to the memory-interface choice:
    `fence_i` needs Zifencei and an instruction fetch that sees earlier stores; `ma_data` needs
    misaligned loads and stores in hardware.
 
@@ -113,6 +117,8 @@ stale the same day.)
 - **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
   whose `intent.jsonl` is the decoder's ground truth, not its expected output.
 - **What happened and what is unresolved:** `docs/journal/2026-09.md`, latest entries at the bottom.
+- **Pinned sources:** `reference/README.md`. It lists Traccar's decoders, the GT06 document,
+  riscv-tests, Spike's source and the RISC-V manuals, each with its hash or commit.
 - **How to write:** the author's guide, `~/epoynt/docs/platform/writing-style.md`, outside this repo.
   From 2026-09-30 it governs every document, commit message, PR body and reply.
 
