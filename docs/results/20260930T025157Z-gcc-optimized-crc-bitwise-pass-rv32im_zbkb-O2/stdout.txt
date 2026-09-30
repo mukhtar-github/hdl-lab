@@ -1,0 +1,105 @@
+
+;; Function main (main, funcdef_no=2, decl_uid=1502, cgraph_uid=4, symbol_order=3) (executed once)
+
+Removing basic block 9
+Removing basic block 10
+Removing basic block 11
+int main ()
+{
+  unsigned int ivtmp.28;
+  unsigned int ivtmp.15;
+  uint16_t crc;
+  uint16_t crc;
+  uint32_t v;
+  uint32_t v;
+  unsigned int i;
+  uint32_t acc;
+  long unsigned int _4;
+  long unsigned int _5;
+  unsigned char _34;
+  short unsigned int _35;
+  void * _39;
+  short unsigned int _46;
+  void * _47;
+  unsigned char _50;
+  short unsigned int _51;
+  short unsigned int _62;
+  short unsigned int _63;
+  unsigned int _72;
+  short unsigned int bswapsrc_81;
+
+  <bb 2> [local count: 10737416]:
+  __asm__ __volatile__("rdinstret %0" : "=r" v_27);
+  ivtmp.28_41 = (unsigned int) &frame;
+  _72 = ivtmp.28_41 + 12;
+
+  <bb 3> [local count: 695081830]:
+  # crc_79 = PHI <crc_82(3), 65535(2)>
+  # ivtmp.28_89 = PHI <ivtmp.28_70(3), ivtmp.28_41(2)>
+  _47 = (void *) ivtmp.28_89;
+  _34 = MEM[(const uint8_t *)_47];
+  _35 = (short unsigned int) _34;
+  crc_37 = _35 ^ crc_79;
+  crc_82 = .CRC_REV (crc_37, 0, 4129);
+  ivtmp.28_70 = ivtmp.28_89 + 1;
+  if (ivtmp.28_70 != _72)
+    goto <bb 3>; [87.64%]
+  else
+    goto <bb 4>; [12.36%]
+
+  <bb 4> [local count: 10737416]:
+  _46 = ~crc_82;
+
+  <bb 5> [local count: 1063004408]:
+  # acc_73 = PHI <acc_30(7), 0(4)>
+  # i_75 = PHI <i_31(7), 0(4)>
+  bswapsrc_81 = (short unsigned int) i_75;
+  _63 = bswapsrc_81 r>> 8;
+  MEM <unsigned short> [(unsigned char *)&frame + 10B] = _63;
+  __asm__ __volatile__("" :  :  : "memory");
+
+  <bb 6> [local count: 68813115639]:
+  # crc_85 = PHI <crc_77(6), 65535(5)>
+  # ivtmp.15_87 = PHI <ivtmp.15_83(6), ivtmp.28_41(5)>
+  _39 = (void *) ivtmp.15_87;
+  _50 = MEM[(const uint8_t *)_39];
+  _51 = (short unsigned int) _50;
+  crc_53 = _51 ^ crc_85;
+  crc_77 = .CRC_REV (crc_53, 0, 4129);
+  ivtmp.15_83 = ivtmp.15_87 + 1;
+  if (_72 != ivtmp.15_83)
+    goto <bb 6>; [87.64%]
+  else
+    goto <bb 7>; [12.36%]
+
+  <bb 7> [local count: 1063004408]:
+  _62 = ~crc_77;
+  acc_29 = acc_73 r>> 31;
+  _4 = (long unsigned int) _62;
+  acc_30 = _4 ^ acc_29;
+  i_31 = i_75 + 1;
+  if (i_31 != 1000)
+    goto <bb 5>; [98.99%]
+  else
+    goto <bb 8>; [1.01%]
+
+  <bb 8> [local count: 10737416]:
+  __asm__ __volatile__("rdinstret %0" : "=r" v_10);
+  htif_puts ("crc_ref  = 0x");
+  htif_puthex16 (_46);
+  htif_putchar (10);
+  htif_puts ("acc      = 0x");
+  htif_puthex32 (acc_30);
+  htif_putchar (10);
+  htif_puts ("iters    = ");
+  htif_puthex32 (1000);
+  htif_putchar (10);
+  htif_puts ("instret  = ");
+  _5 = v_10 - v_27;
+  htif_puthex32 (_5);
+  htif_putchar (10);
+  return 0;
+
+}
+
+
