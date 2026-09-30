@@ -1,0 +1,23 @@
+cc       = riscv64-elf-gcc (GCC) 16.2.0
+cflags   = -march=rv32im -mabi=ilp32 -mtune=rocket -mcmodel=medany -O2 -ffreestanding -fno-builtin -Wall -Wextra -Werror
+--- putchar   (spike --isa=rv32im) ---
+image    = sha256:06b8c5f33a456aa051945935a75fe2aee1ead2cac0bde18717fcaca87355ccd2
+printed  = 102400 bytes before the last line
+instret  = 1e845feb
+wall     = 19.15 s
+--- write-1   (spike --isa=rv32im) ---
+image    = sha256:a8780908244c912416e19a009d73aa244e5c1dd36b2816c4482cc5e11d3a7685
+printed  = 102400 bytes before the last line
+instret  = 1e847304
+wall     = 23.32 s
+--- write-4096   (spike --isa=rv32im) ---
+image    = sha256:7f064936ed13c55687e410b19b07d99905832030bf7fd0070804139ff6f7b2fb
+printed  = 102400 bytes before the last line
+instret  = 0001db4a
+wall     = 0.08 s
+--- compute   (spike --isa=rv32im) ---
+image    = sha256:043a693ca537b307eca65cfa96fb5cd795d341d79c76589404ab1a7059099ed5
+printed  = 22 bytes before the last line
+instret  = 17d78405
+wall     = 17.02 s
+text     = the three printing modes printed the same bytes
