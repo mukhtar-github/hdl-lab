@@ -6,6 +6,7 @@
 #   make check      run, then hold the reference lines to crc_oracle.py
 #   make dump       disassemble
 #   make anatomy    the CRC Byte Anatomy page, from Spike's commit log
+#   make htif-cost  what each way of printing costs under Spike
 #   make clean
 #
 # Homebrew's riscv64-elf-gcc is a FREESTANDING compiler: there is no
@@ -76,7 +77,7 @@ BUILD     := build/$(CONFIG_ID)
 ELFS    := $(addprefix $(BUILD)/,$(addsuffix .elf,$(PROGS)))
 IMAGES  := $(ELFS:.elf=.bin)
 
-.PHONY: all run check clean dump anatomy
+.PHONY: all run check clean dump anatomy htif-cost
 
 all: $(ELFS)
 
@@ -117,6 +118,41 @@ check: $(ELFS) $(IMAGES)
 # stops if the code GCC emits no longer matches the notes written for it.
 anatomy:
 	@$(PYTHON) crc_anatomy.py
+
+# What each way of printing costs under Spike, measured for decisions/0014. Not a
+# reference program. Its ELFs are rebuilt on every run, so no stale binary can
+# answer for a changed source (docs/bugs/0004). The three printing modes must
+# print the same text, or this fails.
+HTIF_COST  := build/htif-cost
+HTIF_FLAGS := $(ARCHFLAGS) $(OPT) -ffreestanding -fno-builtin -Wall -Wextra -Werror
+
+htif-cost:
+	@rm -rf $(HTIF_COST) && mkdir -p $(HTIF_COST)
+	@$(CC) $(HTIF_FLAGS) -DMODE_PUTCHAR -DN=102400u $(LDFLAGS) \
+		-o $(HTIF_COST)/putchar.elf $(COMMON) htif_cost.c
+	@$(CC) $(HTIF_FLAGS) -DMODE_WRITE -DN=102400u -DCHUNK=1u $(LDFLAGS) \
+		-o $(HTIF_COST)/write-1.elf $(COMMON) htif_cost.c
+	@$(CC) $(HTIF_FLAGS) -DMODE_WRITE -DN=102400u -DCHUNK=4096u $(LDFLAGS) \
+		-o $(HTIF_COST)/write-4096.elf $(COMMON) htif_cost.c
+	@$(CC) $(HTIF_FLAGS) -DMODE_COMPUTE -DN=100000000u $(LDFLAGS) \
+		-o $(HTIF_COST)/compute.elf $(COMMON) htif_cost.c
+	@echo "cc       = $(CC_ID)"
+	@echo "cflags   = $(strip $(HTIF_FLAGS))"
+	@for m in putchar write-1 write-4096 compute; do \
+		/usr/bin/time -p $(SPIKE) --isa=$(ARCH) $(HTIF_COST)/$$m.elf \
+			> $(HTIF_COST)/$$m.out 2> $(HTIF_COST)/$$m.time \
+			|| { cat $(HTIF_COST)/$$m.out $(HTIF_COST)/$$m.time; exit 1; }; \
+		sed '$$d' $(HTIF_COST)/$$m.out > $(HTIF_COST)/$$m.text; \
+		$(OBJCOPY) -O binary $(HTIF_COST)/$$m.elf $(HTIF_COST)/$$m.bin; \
+		echo "--- $$m   (spike --isa=$(ARCH)) ---"; \
+		echo "image    = sha256:$$($(SHA256) $(HTIF_COST)/$$m.bin | cut -d' ' -f1)"; \
+		echo "printed  = $$(wc -c < $(HTIF_COST)/$$m.text | tr -d ' ') bytes before the last line"; \
+		tail -n 1 $(HTIF_COST)/$$m.out; \
+		echo "wall     = $$(awk '/^real/ { print $$2 }' $(HTIF_COST)/$$m.time) s"; \
+	done
+	@cmp $(HTIF_COST)/putchar.text $(HTIF_COST)/write-1.text \
+		&& cmp $(HTIF_COST)/putchar.text $(HTIF_COST)/write-4096.text \
+		&& echo "text     = the three printing modes printed the same bytes"
 
 dump: $(ELFS)
 	@for e in $(ELFS); do $(OBJDUMP) -d $$e | head -40; done
