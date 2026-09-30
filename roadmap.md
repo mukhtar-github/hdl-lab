@@ -39,9 +39,17 @@ The revised endpoint is:
 That is the actual job description of a computer architect. It also has a natural terminus:
 the workload defines when you are done.
 
-Phase 4 decides the mechanism. It can be a ratified extension, a custom extension, or another
-kind of hardware, such as a wider load path. Rule 3 of the standard/custom boundary decides
-between the first two, and any of the three completes the project (`decisions/0013`).
+Phase 4 decides the mechanism, or a set of mechanisms, for the configurations frozen in Phase 0. It
+can be a ratified extension, a custom extension, or other hardware aimed at this workload, such as a
+wider load path. A general-purpose feature does not count: a branch predictor, a cache, deeper
+forwarding or another pipeline stage is part of the core's design. Software changes do not count
+either, because they belong to the baseline. Rule 3 of the standard/custom boundary decides between
+the two kinds of extension.
+
+Before Phase 5 starts, state what speedup, for what area and Fmax, would make the mechanism worth
+it. Phase 5 then integrates the best candidate and measures it. The verdict compares those numbers
+with the stated bar and with the commodity part. A measured "not worth it" completes the project as
+fully as a "worth it" (`decisions/0013`).
 
 One honest caveat. The market observation that RISC-V wins in domain-specific silicon does
 **not** mean you can compete there. Tenstorrent and Axelera have hundreds of engineers and
