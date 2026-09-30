@@ -1,7 +1,7 @@
 # 0013 — The endpoint names the mechanism that the measurements choose
 
 - **Date:** 2026-09-30
-- **Status:** Accepted, **amended on 2026-09-30**; see the amendment at the end.
+- **Status:** Accepted, **amended twice on 2026-09-30**; see the amendments at the end.
 - **Phase:** all. It changes the roadmap's statement of what finishes the project.
 
 ## Context
@@ -140,3 +140,19 @@ which are not pinned in `reference/`.
 
 **Not adopted:** the review's claim that a measured "no" is "the likely case". The only
 measurement so far is `0002`: one kernel, counted in instructions on Spike.
+
+# Amendment 2 — 2026-09-30
+
+This checks Amendment 1's facts about extensions against the ISA manual, version 20250508, which
+is now pinned in `reference/README.md`. The section numbers are that version's. Rule 3's
+preference in Amendment 1 does not change.
+
+- **Zbc holds three instructions:** `clmul`, `clmulh` and `clmulr` (Volume I, §29.4.3). **Zbkc
+  holds two:** `clmul` and `clmulh` (§29.4.6). So Zbkc holds every instruction of the Zbc loop in
+  `0002`.
+- **"A ratified extension is implemented whole" is not in the manual in those words.** Instead, the
+  manual defines a smaller set of instructions as an extension of its own. Zmmul "implements the
+  multiplication subset of the M extension" (§12.3), and Zbkc is carry-less multiply without
+  `clmulr`. So a core can name Zbkc, but not an unnamed part of Zbc.
+- **`misa` has no bit for Zbc or Zbkc.** Its B bit means Zba, Zbb and Zbs together, and its K bit
+  is reserved (Volume II, §3.1.1).
