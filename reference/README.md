@@ -1,8 +1,8 @@
 # reference/ — third-party source, read-only
 
-Reference implementations, fetched for reading. **Not part of this project's build, and not
-committed** — the `.java` files here are gitignored. This file records what belongs here and
-how to get it back, which is the part worth keeping.
+Reference implementations and specifications, fetched for reading. **Not part of this project's
+build, and not committed**: the `.java` and `.pdf` files here are gitignored. This file records
+what belongs here and how to get it back, which is the part worth keeping.
 
 Per `docs/decisions/0006`: read implementations and specifications, not domain material.
 Traccar's decoders are the de facto documentation for the GT06 / JT/T 808 family, because the
@@ -189,3 +189,56 @@ done
 ```
 
 Not committed. The directory is gitignored.
+
+## The RISC-V manuals, and three study aids
+
+Added 2026-09-30. The author downloaded each file between 2026-08-31 and 2026-09-26. Four of them
+came from a Google Drive copy, not from their publisher. So on 2026-09-30 each file was compared
+with its publisher's release, and all seven are byte-identical to it.
+
+| File | Document | Version | Why it is here |
+|---|---|---|---|
+| `riscv-unprivileged.pdf` | *The RISC-V Instruction Set Manual, Volume I: Unprivileged Architecture*, 727 pages | 20250508, ratified | The ISA that the core implements, and the ratified extensions that rule 3 names. `decisions/0013`'s Amendment 2 cites it. |
+| `riscv-privileged.pdf` | *The RISC-V Instruction Set Manual, Volume II: Privileged Architecture*, 221 pages | 20250508, ratified | The version that `decisions/0009` pins before Phase 2's trap minimum is written (its §2). 0009's rules are to be checked against it. |
+| `riscv-spec-20191213.pdf` | *The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA*, 238 pages | 20191213 | The version that GCC 16.2.0 assumes by default: `-misa-spec=20191213` reaches `cc1` (`experiments/0001`). |
+| `riscv-abi.pdf` | *RISC-V ABIs Specification*, 56 pages | 1.0, ratified | The `ilp32` calling convention that `bench/rv32` builds with |
+| `rvalp.pdf` | *RISC-V Assembly Language Programming*, John Winans, 91 pages | Draft v0.18.4, 2026-07-28 | A study aid. Not cited. |
+| `riscv-card.pdf` | *RISC-V Reference Card*, 6 pages | v1.0 | A study aid. Not cited. |
+| `greencard-20181213.pdf` | The green card of *The RISC-V Reader*, David Patterson, 2 pages | 2018-12-13 | A study aid. Not cited. It predates most of the ratified extensions. |
+
+**Where these disagree, Volumes I and II at 20250508 win.** A record that cites another version
+says so.
+
+- **Sources:** the releases of https://github.com/riscv/riscv-isa-manual (tags `20250508` and
+  `Ratified-IMAFDQC`), https://github.com/riscv-non-isa/riscv-elf-psabi-doc (tag `v1.0`),
+  https://github.com/johnwinans/rvalp (tag `v0.18.4`), https://github.com/jameslzhu/riscv-card
+  (tag `v1.0`), and http://riscvbook.com/greencard-20181213.pdf
+- **Versions:** on 2026-09-30, 20250508 is the newest numbered release of the ISA manual. The
+  releases after it are automatic builds, named `riscv-isa-release-<commit>-<date>`.
+- **Licences:** CC-BY-4.0 for all but the green card, which states none
+
+```bash
+R=https://github.com/riscv/riscv-isa-manual/releases/download
+curl -sSfL -o reference/riscv-unprivileged.pdf "$R/20250508/riscv-unprivileged-20250508.pdf"
+curl -sSfL -o reference/riscv-privileged.pdf "$R/20250508/riscv-privileged-20250508.pdf"
+curl -sSfL -o reference/riscv-spec-20191213.pdf "$R/Ratified-IMAFDQC/riscv-spec-20191213.pdf"
+curl -sSfL -o reference/riscv-abi.pdf \
+  https://github.com/riscv-non-isa/riscv-elf-psabi-doc/releases/download/v1.0/riscv-abi.pdf
+curl -sSfL -o reference/rvalp.pdf https://github.com/johnwinans/rvalp/releases/download/v0.18.4/rvalp.pdf
+curl -sSfL -o reference/riscv-card.pdf \
+  https://github.com/jameslzhu/riscv-card/releases/download/v1.0/riscv-card.pdf
+curl -sSfL -o reference/greencard-20181213.pdf http://riscvbook.com/greencard-20181213.pdf
+shasum -a 256 -c <<'EOF'
+cef2e63c08c6f82cf7acc9056a589954f5b1adf6f7dccaa38cd75278b093e984  reference/riscv-unprivileged.pdf
+d0228bbecc76943aaa5685e381e0263a8c750d18b1b0c452b086b0ddd15a4955  reference/riscv-privileged.pdf
+f392624cc815cd3f259413cbd9ae2f38678ee930878855a0f4673019410d7554  reference/riscv-spec-20191213.pdf
+a8d06bdcaa82a6a4567a1904dc27ef1ca1043ebaa1f523558c927a9d72bc23d9  reference/riscv-abi.pdf
+2fe3d9b2ce0db9ed07106fc983e71db0b79391dc07dd041e3f9c16840de7fb5d  reference/rvalp.pdf
+401f90fa557cf5f501e761eb0ec17cce98eac798f65cc85acf811113dafe7aea  reference/riscv-card.pdf
+8016ae4e7c3ba676b3dd927530f41e967116b56441f108c62e44c196fc39dd74  reference/greencard-20181213.pdf
+EOF
+```
+
+The URLs name each release by its tag, so this fetches what was checked, not a later build. The
+last command fails if any file differs. Not committed: the PDFs are gitignored, like the GT06
+document.
