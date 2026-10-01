@@ -49,7 +49,7 @@ theatre.
 ✅ Spike 1.1.0 (tag v1.1.0)✅ make lint — 9 modules, green and meaningful
                            ✅ make mutate-alu — 7/7 injected bugs killed
                            ✅ bench/rv32 on Spike — 20/20 runs identical
-                           ✅ bench/stimulus — generator, 23 tests
+                           ✅ bench/stimulus — generator, 26 tests
 ```
 
 **The Phase 0 gate is not "everything compiles."** Since `docs/decisions/0010` it has two

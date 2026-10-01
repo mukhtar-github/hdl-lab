@@ -25,7 +25,7 @@ Each run writes three files to `build/<parameter file>-<seed>/`:
 
 | File | What it holds |
 |---|---|
-| `stimulus.bin` | The decoder's input: `(connection, chunk)` pairs in delivery order (SPEC §3). Format below. |
+| `stimulus.bin` | The decoder's input: each connection's protocol, then `(connection, chunk)` pairs in delivery order (SPEC §3). Format below. |
 | `intent.jsonl` | What the generator put where: each connection, frame and garbage run, with its offset in its connection's byte stream, its fields, and its fault if it has one. |
 | `manifest.json` | The seed, every parameter and rule, the generator's commit and source hashes, the output hashes, and what the run actually contains. |
 
@@ -119,26 +119,26 @@ Integers are little-endian, RV32's byte order. Every header starts on a 4-byte b
 decoder reads one with a single `lw`, and the harness costs one load per chunk.
 
 ```
-header   "TFDS" | u16 format version (1) | u16 header bytes (20)
+header   "TFDS" | u16 format version (2) | u16 header bytes (20)
          | u32 chunks | u32 connections | u32 payload bytes (chunk data, no padding)
+table    u8 protocol per connection: 1 GT06, 2 JT808 | zeros to a multiple of 4
 chunk    u16 length | u16 connection | length bytes | zeros to a multiple of 4
 ```
 
+The table stands in for the port that each connection arrived on, so the decoder knows a
+connection's protocol before its first byte (`decisions/0011`). This is version 2, from
+`decisions/0014`. Version 1 had no table, and `container.unpack` refuses it.
+
 It reaches the decoder as data the compiler cannot see. It is linked into the decoder's image in a
 section of its own, never compiled in as a C array (`bench/README`, `decisions/0014`).
-
-**Version 2 is decided, and not yet written.** `decisions/0014` adds a table between the header and
-the first chunk: one byte for each connection, 1 for GT06 and 2 for JT808. The decoder needs it to
-know each connection's protocol before the connection's first byte (`decisions/0011`). Until the
-generator writes version 2, the layout above is version 1.
 
 ## Checking
 
 `check.py` rebuilds each connection's byte stream from `stimulus.bin`. Then it walks `intent.jsonl`
 over the stream, parsing every frame back and comparing it with its declared fields, header values
-and fault. It also checks every garbage run against its alphabet, the session-first rule, chunk
-sizes, the manifest's hashes, and that no identifier can be a real device's: every IMEI must fail
-its Luhn check digit. It imports none of the encoders. Frames are parsed in the order
+and fault. It also checks each connection's protocol in the table, every garbage run against its
+alphabet, the session-first rule, chunk sizes, the manifest's hashes, and that no identifier can be
+a real device's: every IMEI must fail its Luhn check digit. It imports none of the encoders. Frames are parsed in the order
 Traccar reads them, and GT06 CRCs go through `bench/rv32/crc_oracle.py`, a different path from
 `gt06.py`'s table.
 
@@ -146,15 +146,18 @@ Traccar reads them, and GT06 CRCs go through `bench/rv32/crc_oracle.py`, a diffe
 they agree, the two are consistent with each other, not necessarily right. What ties them to the
 sources is the anchors in `test_stimulus.py`.
 
-`test_stimulus.py` has four groups:
+`test_stimulus.py` has five groups:
 
 - **Anchors.** The GT06 vendor examples byte for byte, two CRC paths agreeing, Traccar's escaping
   vector, Traccar's Luhn digit, and 50 outputs of the SplitMix64 reference implementation.
 - **Layouts.** Header lengths, STANDARD lengths, and rule R11 over a large run.
 - **Parameters.** Every key is required, unknown keys are refused, and so is any batch whose
   length a 10-bit field cannot state.
+- **Container.** A two-connection `stimulus.bin`, written out by hand from `decisions/0014`'s
+  layout, byte for byte. Version 1, a protocol code of 0 or 3, non-zero padding and a table that
+  runs past the end are refused.
 - **Streams.** Same seed, same bytes. The coverage run contains every class. `check.py` passes
-  the coverage run, and fails each of 13 corruptions for its own reason.
+  the coverage run, and fails each of 14 corruptions for its own reason.
 
 ## What it does not do
 
