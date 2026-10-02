@@ -6,8 +6,8 @@
 Reads stimulus.bin, rebuilds each connection's byte stream from the chunks, and walks intent.jsonl
 over it. Every frame is parsed back and compared with the fields, fault and header values it was
 declared to have. Every garbage run is checked against its alphabet. Then the rules that are
-checkable from the output are checked: session frames first, framing per connection, and the
-output hashes in manifest.json.
+checkable from the output are checked: each connection's protocol in the stimulus's table, session
+frames first, framing per connection, and the output hashes in manifest.json.
 
 Independence, and its limit. This file imports none of the encoders. Frames are parsed in the order
 Traccar reads them, and GT06 CRCs are computed by bench/rv32/crc_oracle.py, a different path from
@@ -250,7 +250,8 @@ def check(out):
         need(hashlib.sha256(data).hexdigest() == manifest["outputs"][name]["sha256"],
              f"{name} matches the manifest's hash")
 
-    connections, chunks = container.unpack(blob)
+    protocols, chunks = container.unpack(blob)
+    connections = len(protocols)
     streams = [bytearray() for _ in range(connections)]
     sizes = [[] for _ in range(connections)]
     for conn, data in chunks:
@@ -270,6 +271,7 @@ def check(out):
                 conn, offset, first = r, 0, True
                 need(r["conn"] not in seen, "each connection once")
                 seen.add(r["conn"])
+                need(protocols[r["conn"]] == r["protocol"], "the protocol in the stimulus's table")
                 check_device(r)
                 continue
             need(r["conn"] == conn["conn"] and r["offset"] == offset, "segments are contiguous")

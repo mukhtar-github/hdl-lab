@@ -5,6 +5,7 @@
                Traccar's escaping test, and 50 outputs of the SplitMix64 reference implementation.
   Layouts      what the sources fix about header and body lengths.
   Parameters   nothing has a default, and nothing a format cannot carry is accepted.
+  Container    stimulus.bin's layout, byte for byte as decisions/0014 states it, and what it refuses.
   Streams      what every stimulus must satisfy, and a checker that can be seen to fail.
 """
 
@@ -249,6 +250,44 @@ class Parameters(unittest.TestCase):
             traffic.validate(p)
 
 
+class Container(unittest.TestCase):
+
+    # decisions/0014, section 2, written out by hand for two connections and two chunks:
+    #   header  "TFDS", version 2, 20 header bytes, 2 chunks, 2 connections, 4 payload bytes
+    #   table   GT06, JT808, two bytes of padding
+    #   chunks  3 bytes for connection 0 and one byte of padding; 1 byte for connection 1 and three
+    EXAMPLE_CHUNKS = [(0, bytes.fromhex("78780d")), (1, bytes.fromhex("7e"))]
+    EXAMPLE = bytes.fromhex("54464453 0200 1400 02000000 02000000 04000000"
+                            "01 02 0000"
+                            "0300 0000 78780d 00"
+                            "0100 0100 7e 000000")
+
+    def test_the_layout_is_the_one_0014_states(self):
+        self.assertEqual(container.pack(self.EXAMPLE_CHUNKS, ["gt06", "jt808"]), self.EXAMPLE)
+        self.assertEqual(container.unpack(self.EXAMPLE), (["gt06", "jt808"], self.EXAMPLE_CHUNKS))
+
+    def test_what_unpack_refuses(self):
+        def edit(offset, value):
+            blob = bytearray(self.EXAMPLE)
+            blob[offset] = value
+            return bytes(blob)
+        refused = {
+            "version 1": edit(4, 1),
+            "protocol code 0": edit(20, 0),
+            "protocol code 3": edit(21, 3),
+            "non-zero padding after the table": edit(22, 1),
+            "a table that runs past the end": self.EXAMPLE[:12] + (99).to_bytes(4, "little")
+                                              + self.EXAMPLE[16:],
+        }
+        for name, blob in refused.items():
+            with self.subTest(name), self.assertRaises(ValueError):
+                container.unpack(blob)
+
+    def test_pack_refuses_an_unknown_protocol(self):
+        with self.assertRaises(ValueError):
+            container.pack(self.EXAMPLE_CHUNKS, ["gt06", "jt809"])
+
+
 class Streams(unittest.TestCase):
 
     @classmethod
@@ -323,7 +362,7 @@ class Streams(unittest.TestCase):
 
         def flip(n):
             def fn(blob):
-                conns, chunks = container.unpack(blob)
+                protocols, chunks = container.unpack(blob)
                 k = n % sum(len(d) for _, d in chunks)
                 out = []
                 for conn, data in chunks:
@@ -331,14 +370,19 @@ class Streams(unittest.TestCase):
                         data = data[:k] + bytes([data[k] ^ 0x01]) + data[k + 1:]
                     k -= len(data)
                     out.append((conn, data))
-                return container.pack(out, conns)
+                return container.pack(out, protocols)
             return fn
 
+        def other_protocol_for_connection_0(blob):
+            protocols, chunks = container.unpack(blob)
+            protocols[0] = "jt808" if protocols[0] == "gt06" else "gt06"
+            return container.pack(chunks, protocols)
+
         def swap_first_two_chunks(blob):
-            conns, chunks = container.unpack(blob)
+            protocols, chunks = container.unpack(blob)
             i, j = [k for k, (c, _) in enumerate(chunks) if c == 0][:2]
             chunks[i], chunks[j] = chunks[j], chunks[i]
-            return container.pack(chunks, conns)
+            return container.pack(chunks, protocols)
 
         def first(pred, edit):
             def fn(lines):
@@ -359,6 +403,7 @@ class Streams(unittest.TestCase):
             "flip a byte": dict(blob_fn=flip(0)),
             "flip another byte": dict(blob_fn=flip(4001)),
             "reorder two chunks": dict(blob_fn=swap_first_two_chunks),
+            "the other protocol in the table": dict(blob_fn=other_protocol_for_connection_0),
             "a location's speed": dict(line_fn=first(clean("0x12"), lambda r: r["fields"].update(
                 speed=(r["fields"]["speed"] + 1) % 256))),
             "a batch record": dict(line_fn=first(clean("0x0704"), lambda r: r["fields"]["records"][0]
@@ -396,7 +441,7 @@ class Streams(unittest.TestCase):
         value = 0x78 if protocol[conn] == "gt06" else 0x7E
 
         def fn(blob):
-            conns, chunks = container.unpack(blob)
+            protocols, chunks = container.unpack(blob)
             pos, out = 0, []
             for c, data in chunks:
                 if c == conn:
@@ -405,7 +450,7 @@ class Streams(unittest.TestCase):
                         data = data[:k] + bytes([value]) + data[k + 1:]
                     pos += len(data)
                 out.append((c, data))
-            return container.pack(out, conns)
+            return container.pack(out, protocols)
         return fn
 
     def test_interleave_orders(self):

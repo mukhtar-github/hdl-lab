@@ -49,7 +49,7 @@ theatre.
 ✅ Spike 1.1.0 (tag v1.1.0)✅ make lint — 9 modules, green and meaningful
                            ✅ make mutate-alu — 7/7 injected bugs killed
                            ✅ bench/rv32 on Spike — 20/20 runs identical
-                           ✅ bench/stimulus — generator, 23 tests
+                           ✅ bench/stimulus — generator, 26 tests
 ```
 
 **The Phase 0 gate is not "everything compiles."** Since `docs/decisions/0010` it has two
@@ -76,12 +76,13 @@ source rather than the Homebrew tap, for a reason worth reading in `bench/rv32/R
 stimulus generator exists too (`bench/stimulus`). What remains is the reference decoder, its check
 against the generator's intent log, and the captured reference results.
 
-**Open — `docs/experiments/0002-crc-pass-with-zbkb-and-zbc.md`.** What GCC's CRC pass emits when
-the target has Zbkb or Zbc. The author's hypothesis goes in first; Claude's prediction is sealed
-until then. (`experiments/0001` is answered.)
+**Answered — `docs/experiments/0001` and `0002`.** The second asked what GCC's CRC pass emits
+when the target has Zbkb or Zbc. On instruction count, as GCC 16.2.0 compiles it, neither beats
+the stated table.
 
-Next hardware step: the register file. Next benchmark step: the reference decoder, starting with
-what it does after a fault.
+Next hardware step: the register file. Next benchmark step: the reference decoder. Every decision
+it needs is taken: `0011` covers broken frames, `0012` its records and replies, and `0014` its
+input and output.
 
 ---
 

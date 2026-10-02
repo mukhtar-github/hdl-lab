@@ -11,12 +11,12 @@ stale. A new session checks it against the live state before acting on it.
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
 for both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
 2026-09-30 for `experiments/0002`'s result, for the author's answers with `0013` among them, for
-the pinned RISC-V manuals, and for `0014`.*
+the pinned RISC-V manuals, and for `0014`; and on 2026-10-01 for `stimulus.bin` version 2.*
 
 ## hdl-lab handoff (2026-09-28)
 
-**State:** `main` was at `34e94c6` when this was written, and at `d6d46e0` when it was last updated,
-with PRs #8–#28 all merged and `0014` in review. **Phase 0 is open again**,
+**State:** `main` was at `34e94c6` when this was written, and at `513cb2c` when it was last updated,
+with PRs #8–#29 all merged and `stimulus.bin` version 2 in review. **Phase 0 is open again**,
 for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag is
 `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still local only. It has
 been opened, and its text is in `experiments/0002`, so the tag is redundant now.
@@ -86,7 +86,7 @@ stale the same day.)
     author's GitHub account and of every merge commit. `.git/config` is not in the repository, so
     a new clone needs it set again. Earlier local commits are authored `MacBook Pro`, a name that
     git derived from the hostname.
-- **`0014`, the decoder's harness** (in review). It measured what printing costs first
+- **`0014`, the decoder's harness** (#29). It measured what printing costs first
   (`20260930T052623Z-spike-htif-cost`): one HTIF command costs about 5,000 instructions of
   spinning, whatever it carries.
   - `stimulus.bin` version 2 carries each connection's protocol, one byte per connection.
@@ -96,6 +96,13 @@ stale the same day.)
     formatting and printing come after it.
   - Records leave through `SYS_write`, a buffer at a time. The last line repeats the number of
     records.
+
+**Done on 2026-10-01**
+- **`stimulus.bin` version 2** (in review), step 1 of the decoder's four. A table after the header
+  gives each connection's protocol. `check.py` checks it against `intent.jsonl`, and three new
+  tests hold the layout to `0014` byte for byte. Captured as `20261001T040355Z-stimulus-coverage`:
+  26 tests pass, and the coverage stimulus is 14,272 bytes.
+- **The root README's status block** no longer calls `experiments/0002` open.
 
 **Next, in order**
 1. **The reference decoder:** Phase 0's critical path now.
@@ -109,9 +116,7 @@ stale the same day.)
      leave Spike. Nothing is left to decide before its code.
 
    The work, in this order:
-   1. `stimulus.bin` version 2 in the generator: `container.py`, `check.py` and
-      `test_stimulus.py`. The generator already assigns each connection's protocol, and writes it
-      to `intent.jsonl`.
+   1. ~~`stimulus.bin` version 2 in the generator~~: done on 2026-10-01, in review.
    2. The harness, with a stub decoder: the link, the chunk walk, the record buffer, the
       formatter, `SYS_write`, the last line, the 64-bit count and the three hashes.
    3. The decoder itself.
@@ -136,7 +141,8 @@ stale the same day.)
 - **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0014`.
 - **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
   whose `intent.jsonl` is the decoder's ground truth, not its expected output.
-- **What happened and what is unresolved:** `docs/journal/2026-09.md`, latest entries at the bottom.
+- **What happened and what is unresolved:** `docs/journal/`, one file a month. The latest entry is at
+  the bottom of `2026-10.md`.
 - **Pinned sources:** `reference/README.md`. It lists Traccar's decoders, the GT06 document,
   riscv-tests, Spike's source and the RISC-V manuals, each with its hash or commit.
 - **How to write:** the author's guide, `~/epoynt/docs/platform/writing-style.md`, outside this repo.
@@ -158,7 +164,9 @@ stale the same day.)
   instructions, so each HTIF command costs about 5,000 instructions of spinning (`0014`).
 - **Homebrew:** install only with `HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1`,
   then re-check the reference image hash.
-- **zsh** does not word-split `$vars`, and it expands a word that starts with `=`.
+- **zsh** does not word-split `$vars`, and it expands a word that starts with `=`. It also stops a
+  command whose glob matches nothing, so quote a pattern meant for another program:
+  `grep --include='*.md'`.
 - **Branches:** start every topic from a freshly fetched `origin/main`. The author merges within
   minutes.
 

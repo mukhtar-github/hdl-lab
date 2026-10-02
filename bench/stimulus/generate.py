@@ -5,7 +5,7 @@
 
 Writes three files to --out:
 
-    stimulus.bin    the chunks, in delivery order (container.py)
+    stimulus.bin    each connection's protocol, then the chunks in delivery order (container.py)
     intent.jsonl    one line per connection, frame and garbage run, in each connection's byte order
                     with its offset. This is the ground truth the reference decoder's output will be
                     checked against, and it is not that output (decisions/0004's order: the
@@ -131,7 +131,8 @@ def main(argv=None):
         return 2
 
     os.makedirs(args.out, exist_ok=True)
-    blob = container.pack(chunks, len(conns))
+    assert [c.conn for c in conns] == list(range(len(conns))), "the table is in connection order"
+    blob = container.pack(chunks, [c.protocol for c in conns])
     intent = "".join(json.dumps(line, sort_keys=True, separators=(",", ":")) + "\n"
                      for line in intent_lines(conns)).encode()
     stats = realized(conns, chunks)
