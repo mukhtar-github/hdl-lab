@@ -50,6 +50,7 @@ theatre.
                            ✅ make mutate-alu — 7/7 injected bugs killed
                            ✅ bench/rv32 on Spike — 20/20 runs identical
                            ✅ bench/stimulus — generator, 26 tests
+                           ✅ bench/decoder — harness, 16/16 faults caught
 ```
 
 **The Phase 0 gate is not "everything compiles."** Since `docs/decisions/0010` it has two

@@ -24,8 +24,9 @@ Built so far, in `0004`'s order:
 | `stimulus/` | The stimulus generator. Frames from the specifications, traffic from stated assumptions. |
 | `rv32/` | The bare-metal harness and Spike, proven on one kernel, CRC-ITU. Not the benchmark. |
 | `evidence/` | Scripts that derive the numbers in `PROTOCOL-EVIDENCE.md`. |
+| `decoder/` | The reference decoder's harness (`docs/decisions/0014`), tested with two test decoders. Not yet a decoder. |
 
-Next is the reference decoder.
+Next is the reference decoder itself, in `decoder/`.
 
 ## Read `SPEC.md` first
 
