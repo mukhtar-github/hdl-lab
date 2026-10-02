@@ -1,0 +1,10 @@
+0 jt808 sentence ok device=00000000000000518530 text=
+0 jt808 - resync at=4294967295 len=1
+2 jt808 - stub
+3 gt06 12 ok adc1=0 adc2=1 alarm=2147483648 altitude=-1 archive=1 at=0 battery=100 bytes=787805010001d9dc0d0a cid=16777215 course=359 device=123456789012345 differential=0 fuel=100 gsm=4 header=2019 index=0 info=68 inputs=4096 lac=65535 language=2 lat=-2147483648 len=18 lon=2147483647 mcc=460 mnc=0 odometer=18446744073709551615 product=255 record=1 rssi=31 satellites=12 serial=65535 speed=0 status=4294967295 text=4142 time=1790000000 valid=1 voltage=7
+3 gt06 01 sent bytes=787805010001d9dc0d0a
+5 gt06 3a unsupported at=7 len=21
+7 jt808 0f0a crc_fail at=1 len=2
+7 jt808 8001 sent bytes=abc
+9 gt06 13 malformed at=0 len=15
+11 jt808 0200 ok device=000000518530 lat=-1 odometer=4294967296 time=0
