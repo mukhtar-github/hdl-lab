@@ -8,18 +8,19 @@ stale. A new session checks it against the live state before acting on it.
 
 ---
 
-*Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day
-for both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
-2026-09-30 for `experiments/0002`'s result, for the author's answers with `0013` among them, for
-the pinned RISC-V manuals, and for `0014`; and on 2026-10-01 for `stimulus.bin` version 2.*
+*Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day for
+both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
+2026-09-30 for `experiments/0002`'s result, for the author's answers with `0013` among them, for the
+pinned RISC-V manuals, and for `0014`; and on 2026-10-01 for `stimulus.bin` version 2 and an
+amendment to `0004`.*
 
 ## hdl-lab handoff (2026-09-28)
 
 **State:** `main` was at `34e94c6` when this was written, and at `513cb2c` when it was last updated,
-with PRs #8–#29 all merged and `stimulus.bin` version 2 in review. **Phase 0 is open again**,
-for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag is
-`v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still local only. It has
-been opened, and its text is in `experiments/0002`, so the tag is redundant now.
+with PRs #8–#29 all merged, and `stimulus.bin` version 2 and an amendment to `0004` in review.
+**Phase 0 is open again**, for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only
+pushed tag is `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still
+local only. It has been opened, and its text is in `experiments/0002`, so the tag is redundant now.
 
 **If you are a second assistant reading this:** it replaces any other handoff. Where anything
 disagrees with `roadmap.md` or a decision record, those win. **Freshness is by commit, not by
@@ -103,6 +104,9 @@ stale the same day.)
   tests hold the layout to `0014` byte for byte. Captured as `20261001T040355Z-stimulus-coverage`:
   26 tests pass, and the coverage stimulus is 14,272 bytes.
 - **The root README's status block** no longer calls `experiments/0002` open.
+- **`0004`, amended** (in review, after #30). The reference result fixes the expected output and
+  the instruction count, not a speedup's time. A commodity part shares the source, the stimulus and
+  the expected output lines, not the image.
 
 **Next, in order**
 1. **The reference decoder:** Phase 0's critical path now.
@@ -160,6 +164,9 @@ stale the same day.)
   as `5333c7f` for 0002's. A squash would drop that commit from `main`'s history. For the same
   reason, never rebase or amend a branch after a capture has recorded one of its commits.
 - **A check that has never failed proves nothing.** Break it on purpose once.
+- **Before quoting a decision record, look for later records that narrow it.** Nothing links them.
+  `0004`'s sentences on the denominator and on "the same program" stood after `experiments/0001`
+  and `0008` had narrowed them, until an explanation quoted them on 2026-10-01.
 - **Never print inside a measured window under Spike.** Its host reads `tohost` once every 5,000
   instructions, so each HTIF command costs about 5,000 instructions of spinning (`0014`).
 - **Homebrew:** install only with `HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1`,
