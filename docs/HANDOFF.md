@@ -11,16 +11,16 @@ stale. A new session checks it against the live state before acting on it.
 *Written by Claude on 2026-09-28 (transcript `9a8face2`), after #19 merged. Updated the same day for
 both rounds of amendments to `0009` and `0010`, on 2026-09-29 for `0011` and `0012`, and on
 2026-09-30 for `experiments/0002`'s result, for the author's answers with `0013` among them, for the
-pinned RISC-V manuals, and for `0014`; and on 2026-10-01 for `stimulus.bin` version 2 and an
-amendment to `0004`.*
+pinned RISC-V manuals, and for `0014`; on 2026-10-01 for `stimulus.bin` version 2 and an amendment
+to `0004`; and on 2026-10-02 for the decoder's harness.*
 
 ## hdl-lab handoff (2026-09-28)
 
-**State:** `main` was at `34e94c6` when this was written, and at `513cb2c` when it was last updated,
-with PRs #8–#29 all merged, and `stimulus.bin` version 2 and an amendment to `0004` in review.
-**Phase 0 is open again**, for the benchmark (`decisions/0010`). Phase 1's gate is passed. The only
-pushed tag is `v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still
-local only. It has been opened, and its text is in `experiments/0002`, so the tag is redundant now.
+**State:** `main` was at `34e94c6` when this was written, and at `bedf5de` when it was last updated,
+with PRs #8–#31 all merged and the decoder's harness in review. **Phase 0 is open again**, for the
+benchmark (`decisions/0010`). Phase 1's gate is passed. The only pushed tag is
+`v0.1-alu-golden-model-passing`. The tag `sealed/0002-claude-prediction` is still local only. It has
+been opened, and its text is in `experiments/0002`, so the tag is redundant now.
 
 **If you are a second assistant reading this:** it replaces any other handoff. Where anything
 disagrees with `roadmap.md` or a decision record, those win. **Freshness is by commit, not by
@@ -99,14 +99,22 @@ stale the same day.)
     records.
 
 **Done on 2026-10-01**
-- **`stimulus.bin` version 2** (in review), step 1 of the decoder's four. A table after the header
+- **`stimulus.bin` version 2** (#30), step 1 of the decoder's four. A table after the header
   gives each connection's protocol. `check.py` checks it against `intent.jsonl`, and three new
   tests hold the layout to `0014` byte for byte. Captured as `20261001T040355Z-stimulus-coverage`:
   26 tests pass, and the coverage stimulus is 14,272 bytes.
 - **The root README's status block** no longer calls `experiments/0002` open.
-- **`0004`, amended** (in review, after #30). The reference result fixes the expected output and
+- **`0004`, amended** (#31). The reference result fixes the expected output and
   the instruction count, not a speedup's time. A commodity part shares the source, the stimulus and
   the expected output lines, not the image.
+
+**Done on 2026-10-02**
+- **The decoder's harness, `bench/decoder`** (in review), step 2 of the decoder's four. It links the
+  stimulus in last, checks it before the window, counts the window in 64 bits, and prints the
+  records in canonical order through `SYS_write`. Any trap ends the run with `mcause` and `mepc`.
+  Two test decoders hold it to text predicted or written out by hand, and `make mutate` breaks it
+  16 ways. Captured as `20261002T143128Z-decoder-harness`: all checks pass, and all 16 faults are
+  caught.
 
 **Next, in order**
 1. **The reference decoder:** Phase 0's critical path now.
@@ -121,9 +129,9 @@ stale the same day.)
 
    The work, in this order:
    1. ~~`stimulus.bin` version 2 in the generator~~: done on 2026-10-01, in review.
-   2. The harness, with a stub decoder: the link, the chunk walk, the record buffer, the
-      formatter, `SYS_write`, the last line, the 64-bit count and the three hashes.
-   3. The decoder itself.
+   2. ~~The harness, with a stub decoder~~: done on 2026-10-02, in review.
+   3. The decoder itself, in `bench/decoder`, behind `decoder.h`. Its records go through
+      `records.h`, and `make check` keeps the test decoders passing.
    4. The `0010` check against `intent.jsonl`, seen to fail on broken input.
 
    Before freezing, measure simulated cycles per second on a proxy of about the planned core's
@@ -143,8 +151,9 @@ stale the same day.)
 
 **Where things are**
 - **Plan and rules:** `roadmap.md`, and `docs/decisions/0001`–`0014`.
-- **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, and `bench/stimulus/README.md`,
-  whose `intent.jsonl` is the decoder's ground truth, not its expected output.
+- **The benchmark:** `bench/SPEC.md`, `bench/PROTOCOL-EVIDENCE.md`, `bench/stimulus/README.md`,
+  whose `intent.jsonl` is the decoder's ground truth, not its expected output, and
+  `bench/decoder/README.md`, the harness.
 - **What happened and what is unresolved:** `docs/journal/`, one file a month. The latest entry is at
   the bottom of `2026-10.md`.
 - **Pinned sources:** `reference/README.md`. It lists Traccar's decoders, the GT06 document,
@@ -156,6 +165,8 @@ stale the same day.)
 - `make -C bench/rv32 check`, `make -C bench/stimulus`, `make -C bench/stimulus test`
 - `make alu` and `make mutate-alu` (the Phase 1 gate)
 - `make -C bench/rv32 htif-cost`: what each way of printing costs under Spike (about 60 s)
+- `make -C bench/decoder check` and `make -C bench/decoder mutate`: the harness, held to its test
+  decoders, then broken 16 ways (both together about 14 s)
 - `scripts/capture.sh <label> <command…>`, run from a clean tree
 
 **Gotchas**
@@ -167,6 +178,9 @@ stale the same day.)
 - **Before quoting a decision record, look for later records that narrow it.** Nothing links them.
   `0004`'s sentences on the denominator and on "the same program" stood after `experiments/0001`
   and `0008` had narrowed them, until an explanation quoted them on 2026-10-01.
+- **A trap with no handler hangs Spike.** The trap goes wherever `mtvec` points, and Spike never
+  exits. `bench/decoder`'s harness installs a handler. Nothing limits a run that loops without
+  trapping, except `mutate.py`'s 180 s.
 - **Never print inside a measured window under Spike.** Its host reads `tohost` once every 5,000
   instructions, so each HTIF command costs about 5,000 instructions of spinning (`0014`).
 - **Homebrew:** install only with `HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1`,

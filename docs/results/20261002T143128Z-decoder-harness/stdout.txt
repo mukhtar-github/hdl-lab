@@ -1,0 +1,89 @@
+stimulus  sha256:855bf4fff7a4a10b285ecd87163683f5250ef7cd1b70b724eddac16379899a93  14272 bytes, 484 chunks
+intent    sha256:0e93f887e9b8e97e5763a37b914272a8b6a8bc9761d193566e5d84b3516e3c04
+frames    240 on 12 connections, 203 split across chunks
+type      gt06 0x01 5, gt06 0x08 1, gt06 0x12 66, gt06 0x13 28, gt06 0x3a 1, gt06 0x3e 1, gt06 0x43 1, jt808 0x0102 7, jt808 0x0200 57, jt808 0x0704 34, jt808 0x0f04 1, jt808 0x0f05 1, jt808 0x0f0a 2, jt808 0x0f0b 1, jt808 0x0f0f 1, jt808 0x5501 17, jt808 sentence 16
+framing   7878 103, 7e 61, e7 60, paren 16
+fault     bad_checksum 10, flag_lying 6, length_disagreement 5, none 198, truncated 11, unknown_type 10
+garbage   23 runs, 268 bytes
+escapes   28 pairs in 8327 bytes of JT808 frames (rule R6)
+written   build/coverage-1/  (stimulus.bin, intent.jsonl, manifest.json)
+check: PASS. 240 frames and 484 chunks on 12 connections agree with intent.jsonl; the hashes match manifest.json.
+stimulus  sha256:44da8a08364c81206803473f125af56f2bc738a1ce844e5e46ee77a192ea9684  11540 bytes, 396 chunks
+intent    sha256:823c28b7f185cdc49c206738ee60701aa908a1e2e31fbad601825669dfc5f8b5
+frames    240 on 12 connections, 203 split across chunks
+type      gt06 0x01 8, gt06 0x12 119, gt06 0x13 27, gt06 0x3c 1, gt06 0x3d 2, gt06 0x3f 1, gt06 0x42 1, gt06 0x43 1, jt808 0x0102 4, jt808 0x0200 42, jt808 0x0704 13, jt808 0x0f09 1, jt808 0x0f0d 1, jt808 0x5501 9, jt808 sentence 10
+framing   7878 160, 7e 34, e7 36, paren 10
+fault     bad_checksum 6, flag_lying 3, length_disagreement 9, none 204, truncated 10, unknown_type 8
+garbage   9 runs, 101 bytes
+escapes   18 pairs in 4381 bytes of JT808 frames (rule R6)
+written   build/coverage-2/  (stimulus.bin, intent.jsonl, manifest.json)
+check: PASS. 240 frames and 396 chunks on 12 connections agree with intent.jsonl; the hashes match manifest.json.
+--- build/3319a547635b/decoder.elf   (spike --isa=rv32im) ---
+cc       = riscv64-elf-gcc (GCC) 16.2.0
+cflags   = -march=rv32im -mabi=ilp32 -mtune=rocket -mcmodel=medany -O2 -fno-optimize-crc -DMEM_TOP=0x90000000 -I../rv32 -ffreestanding -fno-builtin -Wall -Wextra -Werror
+source   = stub.c
+image    = sha256:96a5515eddbf1a5bcbda5ea3b6ffa285d7201f37e896f7ec8bde532190d4fe6c
+decoder  = sha256:bb1aa38afc38e035a97bdd2085555e6aeab8687691556316696e028feb4ad0aa
+stimulus = sha256:855bf4fff7a4a10b285ecd87163683f5250ef7cd1b70b724eddac16379899a93
+manifest = matches ../stimulus/build/coverage-1/manifest.json
+format      = 2
+chunks      = 484
+connections = 12
+payload     = 11566
+detection   = none
+instret     = 98931
+records     = 496
+end         = 496
+expect: PASS. 496 records from stub.c match, in canonical order.
+--- build/211be636cc0e/decoder.elf   (spike --isa=rv32im) ---
+cc       = riscv64-elf-gcc (GCC) 16.2.0
+cflags   = -march=rv32im -mabi=ilp32 -mtune=rocket -mcmodel=medany -O2 -fno-optimize-crc -DMEM_TOP=0x90000000 -I../rv32 -ffreestanding -fno-builtin -Wall -Wextra -Werror
+source   = format_test.c
+image    = sha256:eea15daf7be18be3b3a9c2f0bead0fc2c145918250df2ca57da6db3593349d26
+decoder  = sha256:9fbdd4360b68789bcf9b7cbfeb2b4a7f03642a9c51a4a144cb2015f90515e8f4
+stimulus = sha256:855bf4fff7a4a10b285ecd87163683f5250ef7cd1b70b724eddac16379899a93
+manifest = matches ../stimulus/build/coverage-1/manifest.json
+format      = 2
+chunks      = 484
+connections = 12
+payload     = 11566
+detection   = none
+instret     = 7133
+records     = 10
+end         = 10
+expect: PASS. 10 records from format_test.c match, in canonical order.
+decoder: PASS. Two stimuli gave two images and one decoder image, sha256:bb1aa38afc38e035a97bdd2085555e6aeab8687691556316696e028feb4ad0aa.
+a negative number loses its sign -> expect: FAIL. record 4 differs:
+a u64 loses its top digit -> expect: FAIL. record 4 differs:
+an odd hex value keeps its first nibble -> expect: FAIL. record 4 differs:
+fields are not sorted by name -> expect: FAIL. record 1 differs:
+records of one connection change order -> expect: FAIL. record 1 differs:
+the chunk walk ignores padding -> trap: mcause 4, mepc 0x80000e78
+every chunk takes the GT06 path -> expect: FAIL. record 1 differs:
+the last line is missing -> expect: FAIL. the last line is `end = 496`, and nothing follows it
+the last buffer is never written -> expect: FAIL. the output ends with a newline
+the stimulus moves the decoder -> expect: FAIL. the decoder's image changed with the stimulus
+stimulus: version 1 -> stimulus refused: it is not format version 2
+stimulus: a protocol code of 3 -> stimulus refused: a protocol code is neither 1 nor 2
+stimulus: non-zero padding after the table -> stimulus refused: the padding after the table is not zero
+stimulus: non-zero padding after a chunk -> stimulus refused: the padding after a chunk is not zero
+stimulus: a chunk for a connection that does not exist -> stimulus refused: a chunk header is bad
+stimulus: a payload total one too high -> stimulus refused: the chunks do not add up to the header's payload bytes
+
+caught  a negative number loses its sign
+caught  a u64 loses its top digit
+caught  an odd hex value keeps its first nibble
+caught  fields are not sorted by name
+caught  records of one connection change order
+caught  the chunk walk ignores padding
+caught  every chunk takes the GT06 path
+caught  the last line is missing
+caught  the last buffer is never written
+caught  the stimulus moves the decoder
+caught  stimulus: version 1
+caught  stimulus: a protocol code of 3
+caught  stimulus: non-zero padding after the table
+caught  stimulus: non-zero padding after a chunk
+caught  stimulus: a chunk for a connection that does not exist
+caught  stimulus: a payload total one too high
+mutate: 16 of 16 faults caught.
